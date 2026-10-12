@@ -4035,7 +4035,7 @@ function renderLyric(t){
     if(!s){h+='<span class="lv-sp"></span>';continue;}
     var m=s.match(/^《(.+)》:?$/);
     if(m){h+='<span class="lv-tt">'+esc(m[1])+'</span>';continue;}
-    m=s.match(/^【(.{1,14})】?$/)||s.match(/^[(\[](.{1,14})[)\]]:?$/);
+    m=s.match(/^【(.{1,13}?)】?$/)||s.match(/^[(\[](.{1,14})[)\]]:?$/);
     if(m){h+='<span class="lv-sec">'+esc(m[1])+'</span>';continue;}
     h+='<span class="lv-ln">'+esc(s)+'</span>';
   }
