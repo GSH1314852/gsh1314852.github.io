@@ -827,6 +827,38 @@ main{padding-bottom:calc(var(--sab) + 106px)}
 .hot-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
 .hot-chips .chip{padding:7px 11px;font-size:11.5px}
 
+/* ---------- 真人聊天室 / 生成歌曲 ---------- */
+.chat-seg{margin-bottom:12px}
+.room-chips{gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.room-chips .chip{font-size:12px;padding:7px 14px}
+.live-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--faint);margin-bottom:8px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#c7cdd6;flex:none;transition:background .3s}
+.live-dot.ok{background:#1fa95c;box-shadow:0 0 0 3px rgba(31,169,92,.15)}
+.live-dot.bad{background:#e5484d}
+.live-online{margin-left:auto;color:var(--muted)}
+.live-online b{color:var(--ink)}
+.live-members{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:24px}
+.live-members .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:999px;background:var(--soft);border:1px solid var(--stroke);color:var(--muted)}
+.live-members .pill i{width:6px;height:6px;border-radius:50%;background:#1fa95c;flex:none}
+.live-members .pill.me{border-color:var(--acc);color:var(--ink)}
+.live-nick-row{display:flex;align-items:center;gap:8px;margin:8px 0}
+.live-nick-row .ai-lb{flex:none}
+.live-nick-row input{flex:1;min-width:0}
+.live-list{max-height:44vh}
+.live-msg{max-width:85%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.live-msg .lm-nick{display:block;font-size:10.5px;opacity:.65;margin-bottom:2px}
+.live-msg.o{align-self:flex-start;background:var(--soft);border:1px solid var(--stroke);border-bottom-left-radius:5px}
+.live-msg.me{align-self:flex-end;background:var(--grad);color:#fff;border-bottom-right-radius:5px}
+.gen-prog{display:flex;align-items:center;gap:12px}
+.gp-bar{flex:1;height:8px;border-radius:99px;background:var(--soft);border:1px solid var(--stroke);overflow:hidden}
+.gp-bar i{display:block;height:100%;width:0%;border-radius:99px;background:var(--grad);transition:width .4s}
+.gen-prog span{font-size:12px;color:var(--muted);flex:none;max-width:52%}
+.ai-gen-tips{font-size:12px;color:var(--faint);line-height:1.6;margin-top:4px}
+.ai-gen-tips b{color:var(--muted)}
+.ai-gw-link{background:none;border:none;color:var(--acc);font-size:12px;padding:2px 4px;cursor:pointer;text-decoration:underline}
+#genDur{width:100%;accent-color:#1fa95c}
+body[data-md="dark"] .live-msg.o{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.10);color:#f5f5fa}
+body[data-md="dark"] .live-members .pill{background:rgba(255,255,255,.05)}
 </style>
 </head>
 <body data-island="idle" data-md="dark">
@@ -930,6 +962,8 @@ main{padding-bottom:calc(var(--sab) + 106px)}
       <button data-m="swift">Swift 极速</button>
       <button data-m="balanced" class="on">Balanced 均衡</button>
       <button data-m="ai">AI 旗舰</button>
+      <button data-m="scnet">SCNet XL</button>
+      <button data-m="ht6s">6 轨精分</button>
     </div>
     <p class="mdesc" id="mdesc"></p>
   </section>
@@ -1116,6 +1150,7 @@ main{padding-bottom:calc(var(--sab) + 106px)}
     <div class="ai-stats">
       <span>累计访问 <b id="aiCntV">–</b></span>
       <span>已写歌词 <b id="aiCntS">–</b> 首</span>
+      <span>已生成音乐 <b id="aiCntG">–</b> 段</span>
       <span>已聊消息 <b id="aiCntM">–</b> 条</span>
     </div>
   </section>
@@ -1123,7 +1158,8 @@ main{padding-bottom:calc(var(--sab) + 106px)}
   <div class="seg" id="aiSeg">
     <span class="thumb" id="aiSegThumb"></span>
     <button data-ai="song" class="on">写歌工坊</button>
-    <button data-ai="chat">AI 聊天</button>
+    <button data-ai="gen">生成歌曲</button>
+    <button data-ai="chat">聊天室</button>
   </div>
 
   <div id="aiSongPane">
@@ -1188,7 +1224,63 @@ main{padding-bottom:calc(var(--sab) + 106px)}
     </section>
   </div>
 
+  <!-- 生成歌曲（MusicGen 本地推理） -->
+  <div id="aiGenPane" class="hidden">
+    <section class="card">
+      <h2><span class="stepchip">1</span>描述想要的音乐 <em>AI 本地生成 · 免注册</em></h2>
+      <div class="ai-field">
+        <span class="ai-lb">音乐描述</span>
+        <div class="urlrow"><textarea id="genPrompt" rows="2" placeholder="如：轻快的原声吉他，温暖午后，带口哨旋律（英文描述效果更佳）" maxlength="200"></textarea></div>
+      </div>
+      <div class="ai-field">
+        <span class="ai-lb">时长 <b id="genDurTx">10 秒</b></span>
+        <input id="genDur" type="range" min="5" max="30" step="5" value="10">
+      </div>
+      <div class="ai-gen-tips">由 Meta 开源 MusicGen 模型在你的浏览器本地生成<b>纯音乐</b>（无人声演唱）。首次使用需下载模型（约 300MB，之后走浏览器缓存）；生成需 1~5 分钟，建议电脑 Chrome/Edge（WebGPU 加速）。</div>
+    </section>
+    <button class="go" id="genGo"><span class="glow"></span><span id="genGoTx">🎵 生 成 音 乐</span></button>
+    <section class="card hidden" id="genStat">
+      <div class="gen-prog"><div class="gp-bar"><i id="genBar"></i></div><span id="genProgTx">准备中…</span></div>
+    </section>
+    <section class="card hidden" id="genCard">
+      <h2><span class="stepchip">✓</span>生成完成 <em id="genMeta"></em></h2>
+      <audio id="genAudio" controls preload="metadata" style="width:100%"></audio>
+      <div class="btnrow">
+        <button class="gbtn pri" id="genDl">下载 WAV</button>
+      </div>
+    </section>
+  </div>
+
   <div id="aiChatPane" class="hidden">
+    <div class="seg chat-seg" id="chatSeg">
+      <span class="thumb" id="chatSegThumb"></span>
+      <button data-ct="live" class="on">真人聊天室</button>
+      <button data-ct="bot">AI 伙伴</button>
+    </div>
+    <div id="livePane">
+      <section class="card ai-live-card">
+        <div class="chips room-chips" id="roomChips">
+          <button class="chip on" data-room="hall">大厅</button>
+          <button class="chip" data-room="pop">流行</button>
+          <button class="chip" data-room="folk">民谣</button>
+          <button class="chip" data-room="rock">摇滚</button>
+          <button class="chip" data-room="rap">说唱</button>
+        </div>
+        <div class="live-status">
+          <span class="live-dot" id="liveDot"></span><span id="liveStatTx">未连接</span>
+          <span class="live-online"><b id="liveCnt">1</b> 人在线</span>
+        </div>
+        <div class="live-members" id="liveMembers"></div>
+        <div class="ai-chat-list live-list" id="liveList"></div>
+        <div class="live-nick-row"><span class="ai-lb">昵称</span><input id="liveNick" type="text" maxlength="12" placeholder="游客"></div>
+        <div class="ai-chat-inputrow">
+          <textarea id="liveIn" rows="1" placeholder="和房间里的乐友聊聊音乐…"></textarea>
+          <button class="ai-chat-send" id="liveSend">发送</button>
+        </div>
+        <p class="hint">真人聊天经公共 MQTT 服务器（EMQX/HiveMQ）实时转发，<b>不留存任何历史</b>；请勿发送隐私信息。换房间即可遇到不同的人。</p>
+      </section>
+    </div>
+    <div id="botPane" class="hidden">
     <section class="card ai-chat-card">
       <div class="ai-chat-top">
         <span class="ai-chat-model">当前模型 <b id="aiChatModel">–</b></span>
@@ -1200,9 +1292,10 @@ main{padding-bottom:calc(var(--sab) + 106px)}
         <button class="ai-chat-send" id="aiChatSend">发送</button>
       </div>
     </section>
+    </div>
   </div>
 
-  <p class="hint ai-note">AI 能力由免费开放接口提供（Pollinations · GPT-OSS 20B 等，可在上方接入自定义模型）；使用计数由免费公共服务 Abacus 统计。歌词与回复由 AI 生成，仅供参考。</p>
+  <p class="hint ai-note">写词/聊天由免费开放接口提供（Pollinations · GPT-OSS 20B 等，可接入自定义模型）；生成音乐由开源 MusicGen 模型<b>在你的设备本地</b>完成；真人聊天经公共 MQTT 服务器实时转发不留存。使用计数由免费公共服务 Abacus 统计。AI 生成内容仅供参考。</p>
   </div>
 
   <p class="foot">
@@ -1261,12 +1354,12 @@ main{padding-bottom:calc(var(--sab) + 106px)}
       <input id="aiCode" type="tel" inputmode="numeric" maxlength="6" placeholder="6 位验证码">
       <button id="aiSendCode">获取验证码</button>
     </div>
-    <div class="ai-demo-tip hidden" id="aiDemoTip">演示模式：验证码 <b id="aiDemoCode">––––––</b>（真实短信需接入付费 SMS 服务商）</div>
+    <div class="ai-demo-tip hidden" id="aiDemoTip">演示模式：验证码 <b id="aiDemoCode">––––––</b>（可在下方接入真实短信网关）</div>
     <div class="btnrow">
       <button class="gbtn" id="aiLoginCancel">取消</button>
       <button class="gbtn pri" id="aiLoginGo">登 录</button>
     </div>
-    <p class="hint" style="text-align:center">⚠️ 当前为演示环境：验证码不会真实下发，仅在本机弹窗展示；正式运营请接入腾讯云/阿里云短信服务。</p>
+    <p class="hint" style="text-align:center">默认为演示模式（验证码仅本机展示）。<br><button class="ai-gw-link" id="aiGwCfg">⚙ 接入真实短信网关</button>：填入你的网关地址后，验证码将以 POST {phone, code} 真实下发（可对接腾讯云/阿里云短信的云函数转发）。</p>
   </div>
 </div>
 
@@ -2196,12 +2289,16 @@ var STEMS=[
   {id:'accompaniment',name:'伴奏',en:'Instrumental',c:'var(--c-acc)',hex:'#b78cff',on:true},
   {id:'drums',name:'鼓组',en:'Drums',c:'var(--c-drm)',hex:'#ffb13d',on:true},
   {id:'bass',name:'贝斯',en:'Bass',c:'var(--c-bas)',hex:'#4ea8ff',on:false},
-  {id:'other',name:'其他',en:'Other',c:'var(--c-oth)',hex:'#7dffc4',on:false}
+  {id:'other',name:'其他',en:'Other',c:'var(--c-oth)',hex:'#7dffc4',on:false},
+  {id:'guitar',name:'吉他',en:'Guitar',c:'var(--c-voc)',hex:'#5eead4',on:true,extra:true},
+  {id:'piano',name:'钢琴',en:'Piano',c:'var(--c-bas)',hex:'#fda4af',on:false,extra:true}
 ];
 var MDESC={
   swift:'<b>Swift 极速</b> — FFT 1024 / 50% 重叠，几分钟的歌十几秒出结果，适合快速试听。',
   balanced:'<b>Balanced 均衡（推荐）</b> — FFT 2048 + 9 点中值 HPSS，速度与音质平衡，日常使用首选。',
-  ai:'<b>AI 旗舰（HT-Demucs 深度分离）</b> — Meta 开源 SOTA 模型本地推理，人声/伴奏边界最干净。首次使用需下载模型（约 86MB，之后走浏览器缓存），推理较慢，建议台式机/高端手机使用；失败会自动回退均衡引擎。'
+  ai:'<b>AI 旗舰（HT-Demucs 深度分离）</b> — Meta 开源 SOTA 模型本地推理，人声/伴奏边界最干净。首次使用需下载模型（约 86MB，之后走浏览器缓存），推理较慢，建议台式机/高端手机使用；失败会自动回退均衡引擎。',
+  scnet:'<b>SCNet XL 旗舰（新）</b> — 目前 GitHub 开源方案中浏览器可运行的顶级分离模型（SCNet-XL Wide v5，unblend 项目），音质与声部边界显著优于 HT-Demucs。需 WebGPU（Chrome/Edge 新版）+ 约 110MB 模型下载，仅建议台式机使用；失败请切回 AI 旗舰。',
+  ht6s:'<b>6 轨精分（新）</b> — HT-Demucs 六轨版：在人声/鼓/贝斯/其他之外，额外分离出<b>吉他</b>与<b>钢琴</b>两个独立声部（模型约 53MB）。支持 WebGPU 与 CPU 双模式。'
 };
 var MAXDUR=300; // 最长 5 分钟
 
@@ -2249,12 +2346,22 @@ STEMS.forEach(function(s,i){
 
 /* ---------- 模型选择 ---------- */
 var segBtns=[].slice.call($('seg').querySelectorAll('button'));
+function refreshExtraChips(){
+  var six=state.model==='ht6s';
+  STEMS.forEach(function(s){
+    if(!s.extra)return;
+    s.el.style.display=six?'':'none';
+    if(!six){s.on=false;s.el.classList.remove('on');}
+  });
+}
 function setModel(m,btn){
+  if(m==='scnet'&&!navigator.gpu){toast('SCNet XL 需要 WebGPU（新版 Chrome/Edge），本设备不支持');return;}
   state.model=m;
   segBtns.forEach(function(b){b.classList.toggle('on',b===btn);});
   var r=btn.getBoundingClientRect(),pr=$('seg').getBoundingClientRect();
   $('segThumb').style.left=(r.left-pr.left)+'px';$('segThumb').style.width=r.width+'px';
   $('mdesc').innerHTML=MDESC[m];haptic(6);
+  refreshExtraChips();
 }
 segBtns.forEach(function(b){b.onclick=function(){setModel(b.dataset.m,b);};});
 setTimeout(function(){setModel('balanced',segBtns[1]);},50);
@@ -2495,6 +2602,8 @@ $('goBtn').onclick=function(){
   for(var i=0;i<n;i++){L[i]=state.file.iL[i]/32767;R[i]=state.file.iR[i]/32767;}
   if(state.model==='ai'){
     startAi(L,R,state.file.sr,exp);
+  }else if(state.model==='scnet'||state.model==='ht6s'){
+    startUB(L,R,state.file.sr,exp);
   }else{
     var w=getWorker();
     w.postMessage({cmd:'separate',L:L,R:R,sr:state.file.sr,model:state.model,export:exp},[L.buffer,R.buffer]);
@@ -2503,6 +2612,7 @@ $('goBtn').onclick=function(){
 $('iCancel').onclick=function(){
   if(worker){worker.terminate();worker=null;}
   if(aiWorker){aiWorker.terminate();aiWorker=null;}
+  if(ubCtrl){try{ubCtrl.abort('cancelled');}catch(e){}ubCtrl=null;ubSep=null;ubKey=null;}
   state.busy=false;island('idle');refreshGo();toast('已取消');
 };
 
@@ -2559,6 +2669,92 @@ function aiFail(e){
   islandProgress(0,'均衡引擎…');
   var w=getWorker();
   w.postMessage({cmd:'separate',L:L2,R:R2,sr:state.file.sr,model:'balanced',export:state.pendingExport||{vocals:true}},[L2.buffer,R2.buffer]);
+}
+
+/* ---------- 旗舰引擎（unblend · SCNet-XL / HT-Demucs-6s，分块加载 + WebGPU） ---------- */
+var ubMod=null,ubSep=null,ubKey=null,ubCtrl=null;
+var UB_TOTAL={scnet:114857118,ht6s:55845005};
+function fetchParts(urls,total,onp){
+  return new Promise(function(res,rej){
+    var out=new Uint8Array(total),off=0,i=0;
+    function next(){
+      if(i>=urls.length){res(out.buffer);return;}
+      fetch(urls[i]).then(function(r){
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        return r.arrayBuffer();
+      }).then(function(ab){
+        if(ab.byteLength>total-off)throw new Error('模型分块异常');
+        out.set(new Uint8Array(ab),off);off+=ab.byteLength;i++;
+        onp(off/total);next();
+      }).catch(rej);
+    }
+    next();
+  });
+}
+function ubPeaks(Lc,Rc){
+  var PEAKS=240,pk=new Float32Array(PEAKS),n=Lc.length,step=Math.max(1,Math.floor(n/PEAKS));
+  for(var q=0;q<PEAKS;q++){
+    var mx=0,sA=q*step,sB=Math.min(n,sA+step);
+    for(var s=sA;s<sB;s+=7){var v1=Math.abs(Lc[s]),v2=Math.abs(Rc[s]);if(v1>mx)mx=v1;if(v2>mx)mx=v2;}
+    pk[q]=mx;
+  }
+  return pk;
+}
+async function startUB(L,R,sr,exp){
+  var b=location.href.replace(/[^\/]*$/,'');
+  try{
+    islandProgress(1,'旗舰引擎准备…');
+    var r=await resampleTo44k(L,R,sr);
+    if(!state.busy)return;
+    var ab=ctx().createBuffer(2,r.L.length,44100);
+    ab.copyToChannel(r.L,0);ab.copyToChannel(r.R,1);
+    var m=state.model; // 'scnet' | 'ht6s'
+    var key=m==='scnet'?'scnet_xl_wide_v5':'htdemucs_6s';
+    var file=m==='scnet'?'scnetxl.fp16.':'ht6s.fp16.';
+    var parts=m==='scnet'?['aa','ab','ac','ad','ae']:['aa','ab','ac'];
+    if(m==='scnet'&&!navigator.gpu)throw new Error('需要 WebGPU');
+    if(!ubMod)ubMod=await import(b+'vendor/unblend/index.js');
+    if(!ubSep||ubKey!==m){
+      if(ubSep){try{await ubSep.unload();}catch(e){}ubSep=null;}
+      ubCtrl=new AbortController();
+      var bytes=await fetchParts(parts.map(function(s){return b+'models/'+file+s+'.bin?v=1';}),UB_TOTAL[m],function(f){
+        islandProgress(1+Math.round(f*22),'下载模型 '+Math.round(f*100)+'%');
+      });
+      if(!state.busy)return;
+      islandProgress(24,'编译推理引擎（首次较慢）…');
+      ubSep=await ubMod.Separator.load(key,{
+        backend:navigator.gpu?'webgpu':'wasm',
+        precision:'fp16',
+        modelBytes:bytes,
+        wasmPaths:b+'vendor/ort126/',
+        numThreads:1,
+        signal:ubCtrl.signal,
+        onProgress:function(){islandProgress(24,'编译推理引擎（首次较慢）…');}
+      });
+      ubKey=m;
+    }
+    if(!state.busy)return;
+    islandProgress(26,'AI 分离中…');
+    var res=await ubSep.separate(ab,{
+      signal:ubCtrl.signal,
+      onProgress:function(p){if(p&&typeof p.fraction==='number')islandProgress(Math.max(26,Math.min(94,Math.round(26+68*p.fraction))),'AI 分离段 '+(p.segIdx||0)+'/'+(p.totalSegs||''));}
+    });
+    if(!state.busy)return;
+    islandProgress(97,'合成输出…');
+    var out={};
+    Object.keys(res.stems).forEach(function(id){
+      var il=res.stems[id],n2=il.length>>1;
+      var L2=new Float32Array(n2),R2=new Float32Array(n2);
+      for(var q=0;q<n2;q++){L2[q]=il[q*2];R2[q]=il[q*2+1];}
+      out[id]={L:L2,R:R2,peaks:ubPeaks(L2,R2)};
+    });
+    onDone({sr:44100,duration:ab.duration,stems:out});
+  }catch(e){
+    if(!state.busy)return;
+    if(e&&e.name==='AbortError'){state.busy=false;island('idle');refreshGo();return;}
+    state.busy=false;island('idle');refreshGo();
+    toast('旗舰引擎不可用（'+(e&&e.message||e)+'），请改用 AI 旗舰或均衡引擎');
+  }
 }
 
 /* ---------- 播放 ---------- */
@@ -3836,7 +4032,87 @@ $('iCancel').onclick=function(){
 })();
 </script>
 
+<!-- ======================= 生成歌曲（MusicGen Worker 源码） ======================= -->
+<script id="music-src" type="text/js-worker">
+'use strict';
+var MODEL='Xenova/musicgen-small';
+function pmsg(p,tx){self.postMessage({type:'progress',pct:p,phase:tx});}
+self.onmessage=function(e){
+  var d=e.data;
+  if(d.cmd!=='gen')return;
+  run(d).catch(function(err){
+    self.postMessage({type:'error',message:(err&&err.message)||String(err)});
+  });
+};
+async function run(d){
+  pmsg(1,'初始化 AI 运行时…');
+  var T=null;
+  try{T=await import(d.jsUrl);}catch(e){throw new Error('AI 库加载失败，请检查网络');}
+  if(!T||!T.AutoTokenizer)throw new Error('AI 库不可用');
+  T.env.remoteHost='https://hf-mirror.com';
+  T.env.allowLocalModels=false;
+  T.env.useBrowserCache=true;
+  try{
+    var r=await fetch(d.ortBase+'ort-wasm-simd-threaded.jsep.mjs');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    T.env.backends.onnx.wasm.wasmPaths={
+      mjs:URL.createObjectURL(new Blob([await r.text()],{type:'text/javascript'})),
+      wasm:d.ortBase+'ort-wasm-simd-threaded.jsep.wasm'
+    };
+  }catch(e){T.env.backends.onnx.wasm.wasmPaths=d.ortBase;}
+  T.env.backends.onnx.wasm.numThreads=1;
+  T.env.backends.onnx.wasm.proxy=false;
+  var device='wasm';
+  try{
+    var ad=await navigator.gpu.requestAdapter();
+    if(ad&&ad.features&&ad.features.has('shader-f16'))device='webgpu';
+  }catch(e){}
+  var cfgs=device==='webgpu'
+    ?[{text_encoder:'q4f16',decoder_model_merged:'q4f16',encodec_decode:'fp16'}]
+    :[{text_encoder:'q8',decoder_model_merged:'q8',encodec_decode:'fp16'},
+      {text_encoder:'fp16',decoder_model_merged:'fp16',encodec_decode:'fp16'}];
+  var tokenizer=null,model=null,lastErr=null;
+  var progCb=function(p){
+    if(p.status==='progress'&&p.total>0){
+      var f=p.loaded/p.total;
+      pmsg(2+Math.round(f*80),'下载模型 '+Math.round(f*100)+'%（'+Math.round((p.total||0)/1048576)+'MB）');
+    }
+  };
+  for(var i=0;i<cfgs.length;i++){
+    try{
+      pmsg(2,'加载模型（'+(device==='webgpu'?'WebGPU 加速':'CPU 模式')+'）…');
+      tokenizer=await T.AutoTokenizer.from_pretrained(MODEL);
+      model=await T.MusicgenForConditionalGeneration.from_pretrained(MODEL,{dtype:cfgs[i],device:device,progress_callback:progCb});
+      lastErr=null;break;
+    }catch(e){lastErr=e;tokenizer=null;model=null;}
+  }
+  if(!model)throw new Error('模型加载失败（'+device+'）：'+((lastErr&&lastErr.message)||lastErr));
+  pmsg(84,'编码文本提示…');
+  var inputs=tokenizer(d.prompt);
+  var tokens=Math.max(50,Math.min(1500,Math.round(d.seconds*50)));
+  pmsg(86,'AI 生成中（约需 1~5 分钟，请勿离开页面）…');
+  var audio=await model.generate({input_ids:inputs.input_ids,attention_mask:inputs.attention_mask,max_new_tokens:tokens,do_sample:true,guidance_scale:3});
+  pmsg(96,'编码 WAV…');
+  var sr=(model.config&&model.config.audio_encoder&&model.config.audio_encoder.sampling_rate)||32000;
+  var wave=audio&&audio.data?audio.data:audio;
+  if(!(wave instanceof Float32Array))wave=new Float32Array(wave);
+  var wav=encodeWav(wave,sr);
+  self.postMessage({type:'done',wav:wav.buffer,sr:sr,seconds:wave.length/sr},[wav.buffer]);
+}
+function encodeWav(f32,sr){
+  var n=f32.length,buf=new ArrayBuffer(44+n*2),v=new DataView(buf);
+  var ws=function(o,s){for(var i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF');v.setUint32(4,36+n*2,true);ws(8,'WAVE');ws(12,'fmt ');
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);
+  ws(36,'data');v.setUint32(40,n*2,true);
+  for(var i=0;i<n;i++){var s=Math.max(-1,Math.min(1,f32[i]));v.setInt16(44+i*2,s<0?s*32768:s*32767,true);}
+  return new Uint8Array(buf);
+}
+</script>
+
 <!-- ======================= AI 写歌 & 聊天（独立模块） ======================= -->
+<script src="js/mqtt.min.js?v=1"></script>
 <script>
 (function(){
 'use strict';
@@ -3967,7 +4243,7 @@ function bump(k,el){abGet('/hit/stemglass/'+k,el);}
 function peek(k,el){abGet('/get/stemglass/'+k,el);}
 function countersOnce(){
   try{if(sessionStorage.getItem('sg_ai_c'))return;sessionStorage.setItem('sg_ai_c','1');}catch(e){}
-  bump('ai-views',E('aiCntV'));peek('ai-songs',E('aiCntS'));peek('ai-msgs',E('aiCntM'));
+  bump('ai-views',E('aiCntV'));peek('ai-songs',E('aiCntS'));peek('ai-msgs',E('aiCntM'));peek('ai-gens',E('aiCntG'));
 }
 
 /* ---------- 手机号登录（演示模式） ---------- */
@@ -3996,15 +4272,36 @@ E('aiSendCode').onclick=function(){
   if(!/^1[3-9]\d{9}$/.test(p)){aiToast('请输入正确的 11 位手机号');E('aiPhone').focus();return;}
   var code=String(100000+Math.floor(Math.random()*900000));
   pend={p:p,c:code,exp:Date.now()+5*60000};
-  E('aiDemoTip').classList.remove('hidden');
-  E('aiDemoCode').textContent=code.split('').join(' ');
-  aiToast('验证码已生成（演示模式，见弹窗展示）');
   var b=this,n=60;b.disabled=true;
   cdTm=setInterval(function(){
     b.textContent='重新发送 '+n+'s';
     if(--n<0){clearInterval(cdTm);b.disabled=false;b.textContent='获取验证码';}
   },1000);
   b.textContent='重新发送 60s';
+  var gw='';try{gw=(localStorage.getItem('sg_sms_gw')||'').trim();}catch(e){}
+  if(gw&&/^https?:\/\//i.test(gw)){
+    /* 真实短信：POST {phone, code} 到自建网关（如云函数转发腾讯云/阿里云短信） */
+    fetch(gw,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:p,code:code,sign:'StemGlass',ts:Date.now()})})
+      .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);E('aiDemoTip').classList.add('hidden');aiToast('验证码已发送到手机，请查收短信');})
+      .catch(function(){showDemoCode(code);aiToast('短信网关调用失败，已回退演示模式');});
+  }else{
+    showDemoCode(code);
+  }
+};
+function showDemoCode(code){
+  E('aiDemoTip').classList.remove('hidden');
+  E('aiDemoCode').textContent=code.split('').join(' ');
+  aiToast('验证码已生成（演示模式，见弹窗展示）');
+}
+E('aiGwCfg').onclick=function(){
+  var cur='';try{cur=localStorage.getItem('sg_sms_gw')||'';}catch(e){}
+  var u=prompt('接入真实短信：填写短信网关地址（服务端接收 POST JSON {phone, code} 并调用短信服务商下发）。\n可用云函数 / Serverless 免费额度实现。留空并确定则恢复演示模式。',cur);
+  if(u===null)return;
+  try{
+    if(u.trim())localStorage.setItem('sg_sms_gw',u.trim());
+    else localStorage.removeItem('sg_sms_gw');
+  }catch(e){}
+  aiToast(u.trim()?'短信网关已保存，验证码将真实下发':'已恢复演示模式');
 };
 E('aiLoginGo').onclick=function(){
   var p=E('aiPhone').value.trim(),c=E('aiCode').value.trim();
@@ -4138,28 +4435,249 @@ E('aiChatClr').onclick=function(){
   var a=[{r:'b',t:GREET}];saveChat(a);renderChatAll();aiToast('对话已清空');
 };
 
-/* ---------- 写歌 / 聊天 分段切换 ---------- */
+/* ---------- 写歌 / 生成歌曲 / 聊天 分段切换 ---------- */
 var aiMode='song';
 function layoutSegThumb(){
   var b=E('aiSeg').querySelector('button.on'),th=E('aiSegThumb');
   if(b&&th){th.style.left=b.offsetLeft+'px';th.style.width=b.offsetWidth+'px';}
 }
+function layoutChatSeg(){
+  var b=E('chatSeg').querySelector('button.on'),th=E('chatSegThumb');
+  if(b&&th){th.style.left=b.offsetLeft+'px';th.style.width=b.offsetWidth+'px';}
+}
 function showPane(m){
-  if(m==='chat'&&!getLogin()){loginFromChat=true;openLogin('登录后即可与 AI 畅聊（演示验证码即时可见）');return;}
   aiMode=m;
   [].forEach.call(E('aiSeg').querySelectorAll('button'),function(b){b.classList.toggle('on',b.dataset.ai===m);});
   layoutSegThumb();
   E('aiSongPane').classList.toggle('hidden',m!=='song');
+  E('aiGenPane').classList.toggle('hidden',m!=='gen');
   E('aiChatPane').classList.toggle('hidden',m!=='chat');
-  if(m==='chat')scrollChat();
+  if(m==='chat'){
+    layoutChatSeg();
+    if(!live.inited){live.inited=true;liveConnect();}
+    if(chatMode==='bot')scrollChat();
+  }
 }
 [].forEach.call(E('aiSeg').querySelectorAll('button'),function(b){
   b.onclick=function(){showPane(b.dataset.ai);};
 });
 
+/* ---------- 真人聊天室（公共 MQTT · EMQX/HiveMQ） ---------- */
+var BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];
+var LTOP='stemglass-gsh/chat/',LPRE='stemglass-gsh/presence/';
+var chatMode='live';
+var live={cli:null,roomId:'hall',myId:'u'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),members:{},hbTm:null,gcTm:null,brokerIdx:0,inited:false};
+var liveDefNick='游客'+Math.floor(1000+Math.random()*9000);
+function liveNick(){
+  var n=E('liveNick').value.trim();
+  return n||liveDefNick;
+}
+function liveStat(cls,tx){
+  E('liveDot').className='live-dot'+(cls?' '+cls:'');
+  E('liveStatTx').textContent=tx;
+}
+function liveCount(){
+  E('liveCnt').textContent=Object.keys(live.members).length+1;
+  var box=E('liveMembers'),me=liveNick();
+  var ids=Object.keys(live.members);
+  var h=ids.map(function(id){
+    var m=live.members[id];
+    return '<span class="pill'+(m.nick===me?' me':'')+'"><i></i>'+esc(m.nick)+'</span>';
+  });
+  h.unshift('<span class="pill me"><i></i>'+esc(me)+'（我）</span>');
+  box.innerHTML=h.join('');
+}
+function scrollLive(){var l=E('liveList');l.scrollTop=l.scrollHeight;}
+function liveAppend(el){
+  var l=E('liveList');l.appendChild(el);
+  while(l.children.length>150)l.removeChild(l.firstChild);
+  scrollLive();
+}
+function liveSys(text){
+  var d=document.createElement('div');d.className='ai-msg sys';d.textContent=text;liveAppend(d);
+}
+function liveBubble(nick,text,mine){
+  var d=document.createElement('div');
+  d.className='live-msg '+(mine?'me':'o');
+  if(!mine){var n=document.createElement('span');n.className='lm-nick';n.textContent=nick;d.appendChild(n);}
+  d.appendChild(document.createTextNode(text));
+  liveAppend(d);
+}
+function livePublish(obj){
+  if(live.cli&&live.connected)live.cli.publish(LTOP+live.roomId,JSON.stringify(obj),{qos:0});
+}
+function livePresence(){
+  if(live.cli&&live.connected)live.cli.publish(LPRE+live.roomId,JSON.stringify({id:live.myId,nick:liveNick(),ts:Date.now()}),{qos:0});
+}
+function onLiveMsg(topic,payload){
+  var room=topic.indexOf(LPRE)===0?'p':'c';
+  var m;
+  try{m=JSON.parse(payload.toString());}catch(e){return;}
+  if(!m||typeof m.id!=='string')return;
+  if(room==='p'){
+    if(m.id===live.myId)return;
+    if(m.off){
+      if(live.members[m.id]){liveSys(live.members[m.id].nick+' 离开了');delete live.members[m.id];liveCount();}
+      return;
+    }
+    var isNew=!live.members[m.id];
+    live.members[m.id]={nick:String(m.nick||'游客').slice(0,12),ts:Date.now()};
+    if(isNew)liveSys(m.nick+' 进入了聊天室');
+    liveCount();
+    return;
+  }
+  if(m.id===live.myId)return;
+  if(m.sys){liveSys(String(m.text||'').slice(0,60));return;}
+  liveBubble(String(m.nick||'游客').slice(0,12),String(m.text||'').slice(0,500),false);
+}
+function liveConnect(){
+  if(!window.mqtt){liveStat('bad','聊天组件未加载，请刷新页面');return;}
+  if(live.cli){try{live.cli.end(true);}catch(e){}live.cli=null;}
+  clearInterval(live.hbTm);clearInterval(live.gcTm);
+  liveStat('','连接聊天服务器…');
+  var url=BROKERS[live.brokerIdx%BROKERS.length];
+  var c;
+  try{
+    c=mqtt.connect(url,{
+      clientId:'sg_'+Math.random().toString(36).slice(2,10),
+      keepalive:30,reconnectPeriod:4000,connectTimeout:8000,clean:true,
+      will:{topic:LPRE+live.roomId,payload:JSON.stringify({id:live.myId,off:1}),qos:0,retain:false}
+    });
+  }catch(e){liveStat('bad','无法创建连接');return;}
+  live.cli=c;
+  c.on('connect',function(){
+    live.connected=true;
+    liveStat('ok','已连接 · '+url.replace('wss://','').split(':')[0]);
+    c.subscribe(LTOP+live.roomId,{qos:0});
+    c.subscribe(LPRE+live.roomId,{qos:0});
+    livePublish({sys:1,text:liveNick()+' 进入了聊天室'});
+    livePresence();
+    liveCount();
+    clearInterval(live.hbTm);live.hbTm=setInterval(livePresence,15000);
+    clearInterval(live.gcTm);live.gcTm=setInterval(function(){
+      var now=Date.now(),ch=false;
+      Object.keys(live.members).forEach(function(id){
+        if(now-live.members[id].ts>40000){liveSys(live.members[id].nick+' 离开了');delete live.members[id];ch=true;}
+      });
+      if(ch)liveCount();
+    },10000);
+  });
+  c.on('reconnect',function(){live.connected=false;liveStat('','重连聊天服务器…');});
+  c.on('close',function(){if(live.connected){live.connected=false;liveStat('','连接断开，自动重连…');}});
+  c.on('error',function(){live.brokerIdx++;});
+  c.on('message',onLiveMsg);
+}
+function liveSwitchRoom(id){
+  if(id===live.roomId)return;
+  var old=live.roomId;
+  live.roomId=id;
+  [].forEach.call(E('roomChips').querySelectorAll('.chip'),function(b){b.classList.toggle('on',b.dataset.room===id);});
+  E('liveList').innerHTML='';
+  live.members={};liveCount();
+  if(live.cli&&live.connected){
+    live.cli.publish(LPRE+old,JSON.stringify({id:live.myId,off:1}),{qos:0});
+    live.cli.unsubscribe(LTOP+old);live.cli.unsubscribe(LPRE+old);
+    live.cli.subscribe(LTOP+id,{qos:0});live.cli.subscribe(LPRE+id,{qos:0});
+    livePublish({sys:1,text:liveNick()+' 进入了聊天室'});
+    livePresence();
+  }else{
+    liveConnect();
+  }
+  liveSys('已切换到「'+({hall:'大厅',pop:'流行',folk:'民谣',rock:'摇滚',rap:'说唱'})[id]+'」房间');
+}
+[].forEach.call(E('roomChips').querySelectorAll('.chip'),function(b){
+  b.onclick=function(){liveSwitchRoom(b.dataset.room);haptic(6);};
+});
+function autoGrowLive(){var t=E('liveIn');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,96)+'px';}
+function sendLive(){
+  var t=E('liveIn').value.trim();
+  if(!t)return;
+  livePublish({id:live.myId,nick:liveNick(),text:t.slice(0,500),ts:Date.now()});
+  liveBubble(liveNick(),t,true);
+  E('liveIn').value='';autoGrowLive();
+}
+E('liveSend').onclick=sendLive;
+E('liveIn').addEventListener('input',autoGrowLive);
+E('liveIn').addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendLive();}
+});
+var savedNick='';try{savedNick=localStorage.getItem('sg_live_nick')||'';}catch(e){}
+if(savedNick)E('liveNick').value=savedNick;
+E('liveNick').addEventListener('change',function(){
+  try{localStorage.setItem('sg_live_nick',E('liveNick').value.trim());}catch(e){}
+  if(live.cli&&live.connected){livePresence();liveCount();}
+});
+[].forEach.call(E('chatSeg').querySelectorAll('button'),function(b){
+  b.onclick=function(){
+    chatMode=b.dataset.ct;
+    [].forEach.call(E('chatSeg').querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});
+    layoutChatSeg();
+    E('livePane').classList.toggle('hidden',chatMode!=='live');
+    E('botPane').classList.toggle('hidden',chatMode!=='bot');
+    if(chatMode==='bot'){renderChatAll();scrollChat();}
+    else scrollLive();
+  };
+});
+
+/* ---------- 生成歌曲（MusicGen 本地推理） ---------- */
+var genWorker=null,genBusy=false;
+function getGenWorker(){
+  if(genWorker)return genWorker;
+  var src=E('music-src').textContent;
+  var url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
+  genWorker=new Worker(url,{type:'module'});
+  return genWorker;
+}
+E('genDur').oninput=function(){E('genDurTx').textContent=this.value+' 秒';};
+E('genGo').onclick=function(){
+  if(genBusy){
+    if(genWorker){genWorker.terminate();genWorker=null;}
+    genBusy=false;this.disabled=false;E('genGoTx').textContent='🎵 生 成 音 乐';
+    E('genStat').classList.add('hidden');aiToast('已取消生成');return;
+  }
+  var p=E('genPrompt').value.trim();
+  if(!p){aiToast('先描述一下想要的音乐');E('genPrompt').focus();return;}
+  genBusy=true;this.disabled=false;E('genGoTx').textContent='⏹ 点击取消';
+  E('genStat').classList.remove('hidden');
+  E('genBar').style.width='1%';E('genProgTx').textContent='准备中…';
+  var b=location.href.replace(/[^\/]*$/,'');
+  var w=getGenWorker();
+  w.onmessage=function(e){
+    var d=e.data;
+    if(d.type==='progress'){
+      E('genBar').style.width=Math.max(1,Math.min(99,d.pct))+'%';
+      E('genProgTx').textContent=d.phase;
+    }else if(d.type==='done'){
+      genBusy=false;E('genGo').disabled=false;E('genGoTx').textContent='🎵 再 生 成 一 段';
+      E('genBar').style.width='100%';E('genProgTx').textContent='完成！';
+      var blob=new Blob([d.wav],{type:'audio/wav'});
+      var url=URL.createObjectURL(blob);
+      E('genAudio').src=url;
+      E('genMeta').textContent=d.seconds.toFixed?d.seconds.toFixed(1)+' 秒 · '+d.sr+'Hz':Math.round(d.seconds)+' 秒 · '+d.sr+'Hz';
+      E('genCard').classList.remove('hidden');
+      E('genDl').onclick=function(){var a=document.createElement('a');a.href=url;a.download='musicgen-'+Date.now()+'.wav';a.click();};
+      setTimeout(function(){E('genCard').scrollIntoView({behavior:'smooth',block:'start'});},60);
+      bump('ai-gens',E('aiCntG'));
+      aiToast('音乐生成完成 🎵');
+      setTimeout(function(){E('genStat').classList.add('hidden');},1500);
+    }else if(d.type==='error'){
+      genBusy=false;E('genGo').disabled=false;E('genGoTx').textContent='🎵 生 成 音 乐';
+      E('genStat').classList.add('hidden');
+      aiToast('生成失败：'+d.message);
+    }
+  };
+  w.onerror=function(err){
+    genBusy=false;E('genGo').disabled=false;E('genGoTx').textContent='🎵 生 成 音 乐';
+    E('genStat').classList.add('hidden');
+    aiToast('生成失败：'+(err&&err.message||'worker 异常'));
+  };
+  w.postMessage({cmd:'gen',prompt:p.slice(0,200),seconds:+E('genDur').value||10,jsUrl:b+'js/transformers.min.js?v=1',ortBase:b+'js/ort122/'});
+};
+
 /* ---------- 懒初始化（首次进入 AI 页时） ---------- */
 function activate(){
   layoutSegThumb();
+  layoutChatSeg();
   if(inited)return;inited=true;
   ping(true);
   loadCustom();
