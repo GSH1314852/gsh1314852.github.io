@@ -481,6 +481,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 /* ============ 昼夜主题切换 ============ */
 /* 白天：液态玻璃（白雾玻璃 + 阴影悬浮）；黑夜：默认深色 */
 body[data-md="light"]{
+  color-scheme:light;
   --bg:#eef1f5;
   --ink:#1c2126;
   --muted:rgba(35,42,52,.62);
@@ -549,6 +550,7 @@ body[data-md="light"] #themeFab .ico-sun{opacity:1;transform:rotate(0) scale(1)}
 
 /* ============ 黑夜主题（默认）：深色液态玻璃 ============ */
 body[data-md="dark"]{
+  color-scheme:dark;
   --bg:#06060b; --ink:#f5f5fa;
   --muted:rgba(235,235,250,.60); --faint:rgba(235,235,250,.38);
   --stroke:rgba(255,255,255,.13); --stroke-hi:rgba(255,255,255,.26);
@@ -619,6 +621,14 @@ body[data-md="dark"] .urlrow input{background:rgba(255,255,255,.06);border-color
 body[data-md="dark"] .urlrow input::placeholder{color:rgba(235,235,250,.35)}
 body[data-md="dark"] .trk{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09);box-shadow:none}
 body[data-md="dark"] .tplay{border-color:rgba(255,255,255,.10)}
+/* 深色补漏：曲库行 / 通用按钮 / 音轨操作钮 / 加载环（原先漏配导致黑夜仍显白） */
+body[data-md="dark"] .mu-row{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09)}
+body[data-md="dark"] .mu-row:active{background:rgba(46,226,126,.08)}
+body[data-md="dark"] .mu-row.on{background:rgba(46,226,126,.10);border-color:rgba(46,226,126,.42);box-shadow:0 4px 16px rgba(46,226,126,.10)}
+body[data-md="dark"] .gbtn{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:rgba(235,235,250,.78)}
+body[data-md="dark"] .sbtn:not(.on){background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.10);color:rgba(235,235,250,.78)}
+body[data-md="dark"] .spin-ring{border-color:rgba(255,255,255,.15);border-top-color:#2ee27e}
+body[data-md="dark"] .trk img,body[data-md="dark"] .trk .ph{box-shadow:0 4px 12px rgba(0,0,0,.4)}
 /* 工具箱弹出面板 */
 #toolPop{position:fixed;left:50%;bottom:calc(var(--sab) + 94px);transform:translateX(-50%) translateY(14px) scale(.9);
   z-index:91;width:min(92vw,340px);border-radius:24px;padding:14px;
@@ -801,12 +811,12 @@ main{padding-bottom:calc(var(--sab) + 106px)}
   </section>
 
   <section class="card">
-    <h2><span class="stepchip">2</span>分离模型 <em>本地频谱引擎</em></h2>
+    <h2><span class="stepchip">2</span>分离模型 <em>本地 AI · 频谱双引擎</em></h2>
     <div class="seg" id="seg">
       <span class="thumb" id="segThumb"></span>
       <button data-m="swift">Swift 极速</button>
       <button data-m="balanced" class="on">Balanced 均衡</button>
-      <button data-m="ultra">Ultra 旗舰</button>
+      <button data-m="ai">AI 旗舰</button>
     </div>
     <p class="mdesc" id="mdesc"></p>
   </section>
@@ -1363,6 +1373,236 @@ function run(d){
 }
 </script>
 
+<!-- ======================= AI 分离引擎（HT-Demucs ONNX · Worker 源码） =======================
+     复刻 timcsy/demucs-web 的预处理/后处理：FFT 4096 / hop 1024 / 定长 343980（7.8s），
+     双输入（时域波形 + 预计算 STFT），输出 = 时域分支 + 频域分支 iSTFT 相加，
+     分段 stride 257985（25% 交叠）+ 梯形窗加权。 -->
+<script id="ai-src" type="text/js-worker">
+'use strict';
+var cancelled=false;
+function prog(p,ph){self.postMessage({type:'progress',pct:Math.max(0,Math.min(100,Math.round(p))),phase:ph});}
+self.onmessage=function(e){
+  var d=e.data;
+  if(d.cmd==='separate'){cancelled=false;run(d).catch(function(err){
+    self.postMessage({type:'error',message:(err&&err.message)||String(err)});});}
+  else if(d.cmd==='cancel'){cancelled=true;}
+};
+function fetchAll(url,onp){
+  return fetch(url).then(function(r){
+    if(!r.ok)throw new Error('资源下载失败('+r.status+')');
+    var total=+(r.headers.get('content-length')||0);
+    if(!r.body||!total)return r.arrayBuffer();
+    var reader=r.body.getReader(),parts=[],got=0;
+    function step(){return reader.read().then(function(it){
+      if(it.done){var all=new Uint8Array(got),o=0;parts.forEach(function(c){all.set(c,o);o+=c.length;});return all.buffer;}
+      parts.push(it.value);got+=it.value.length;
+      if(onp)onp(got,total);
+      return step();});}
+    return step();
+  });
+}
+/* ---------- FFT（radix-2，同 demucs-web） ---------- */
+var FFT_SIZE=4096,HOP_SIZE=1024,WIN=343980,NBINS=2048,NFRAMES=336,STRIDE=257985;
+var twR=null,twI=null,brC=null,winC=null;
+function initFFT(){
+  if(twR)return;
+  twR=new Float32Array(FFT_SIZE/2);twI=new Float32Array(FFT_SIZE/2);
+  for(var k=0;k<FFT_SIZE/2;k++){var a=-2*Math.PI*k/FFT_SIZE;twR[k]=Math.cos(a);twI[k]=Math.sin(a);}
+  brC=new Int32Array(FFT_SIZE);
+  for(var i=0;i<FFT_SIZE;i++){var r=0,x=i;for(var j=0;j<12;j++){r=(r<<1)|(x&1);x>>=1;}brC[i]=r;}
+  winC=new Float32Array(FFT_SIZE);
+  for(var i2=0;i2<FFT_SIZE;i2++)winC[i2]=0.5*(1-Math.cos(2*Math.PI*i2/FFT_SIZE));
+}
+function fftInPlace(re,im){
+  var n=FFT_SIZE;
+  for(var i=0;i<n;i++){var j=brC[i];if(j>i){var tr=re[i];re[i]=re[j];re[j]=tr;var ti=im[i];im[i]=im[j];im[j]=ti;}}
+  for(var size=2;size<=n;size<<=1){var half=size>>1,step=n/size;
+    for(var o=0;o<n;o+=size){for(var j2=0;j2<half;j2++){
+      var k=j2*step,tr2=twR[k],ti2=twI[k],i1=o+j2,i3=o+j2+half,xr=re[i3],xi=im[i3];
+      var orr=xr*tr2-xi*ti2,oii=xr*ti2+xi*tr2;
+      re[i3]=re[i1]-orr;im[i3]=im[i1]-oii;re[i1]+=orr;im[i1]+=oii;}}}
+}
+function ifftInPlace(re,im){
+  var n=FFT_SIZE,i;
+  for(i=0;i<n;i++)im[i]=-im[i];
+  fftInPlace(re,im);
+  for(i=0;i<n;i++){re[i]/=n;im[i]/=-n;}
+}
+function reflectPad(sig,padL,padR){
+  var len=sig.length,out=new Float32Array(padL+len+padR),i;
+  for(i=0;i<padL;i++)out[i]=sig[Math.min(padL-i,len-1)];
+  out.set(sig,padL);
+  for(i=0;i<padR;i++)out[padL+len+i]=sig[Math.max(0,len-2-i)];
+  return out;
+}
+/* ---------- 预处理：波形 + STFT 双输入（同 prepareModelInput） ---------- */
+function prepareSeg(Lch,Rch,len){
+  initFFT();
+  var le=Math.ceil(WIN/HOP_SIZE),pad=Math.floor(HOP_SIZE/2)*3,padR=pad+le*HOP_SIZE-WIN;
+  var wave=new Float32Array(2*WIN);
+  wave.set(Lch.subarray(0,Math.min(len,WIN)),0);
+  wave.set(Rch.subarray(0,Math.min(len,WIN)),WIN);
+  var x=new Float32Array(4*NBINS*NFRAMES);
+  var scale=1/Math.sqrt(FFT_SIZE);
+  var frRe=new Float32Array(FFT_SIZE),frIm=new Float32Array(FFT_SIZE);
+  for(var ch=0;ch<2;ch++){
+    var src=ch===0?Lch:Rch;
+    var padded=new Float32Array(WIN);
+    padded.set(src.subarray(0,Math.min(len,WIN)));
+    var s1=reflectPad(padded,pad,padR);
+    var cen=reflectPad(s1,FFT_SIZE/2,FFT_SIZE/2);
+    var nf=Math.floor((cen.length-FFT_SIZE)/HOP_SIZE)+1; // 340
+    for(var f=0;f<nf;f++){
+      var st=f*HOP_SIZE,i;
+      for(i=0;i<FFT_SIZE;i++){frRe[i]=cen[st+i]*winC[i];frIm[i]=0;}
+      fftInPlace(frRe,frIm);
+      if(f>=2&&f<2+NFRAMES){
+        var base=(ch*2)*NBINS*NFRAMES,bim=(ch*2+1)*NBINS*NFRAMES,fo=f-2;
+        for(var b=0;b<NBINS;b++){x[base+b*NFRAMES+fo]=frRe[b]*scale;x[bim+b*NFRAMES+fo]=frIm[b]*scale;}
+      }
+    }
+  }
+  return {wave:wave,x:x};
+}
+/* ---------- 频域分支 iSTFT（同 standaloneIspec，融合实现省内存） ---------- */
+function istftTrack(freq,t){
+  var PF=NFRAMES+4,PB=NBINS+1; // 340 帧 × 2049 bin
+  var outL=new Float32Array((PF-1)*HOP_SIZE+FFT_SIZE),outR=new Float32Array(outL.length);
+  var wsum=new Float32Array(outL.length);
+  var re=new Float32Array(FFT_SIZE),im=new Float32Array(FFT_SIZE);
+  var tbase=t*4*NBINS*NFRAMES;
+  for(var ch=0;ch<2;ch++){
+    var out=ch===0?outL:outR;
+    var bre=tbase+(ch*2)*NBINS*NFRAMES,bim=tbase+(ch*2+1)*NBINS*NFRAMES;
+    var gre=new Float32Array(PF*PB),gim=new Float32Array(PF*PB);
+    for(var f=0;f<NFRAMES;f++)for(var b=0;b<NBINS;b++){
+      gre[(f+2)*PB+b]=freq[bre+b*NFRAMES+f];gim[(f+2)*PB+b]=freq[bim+b*NFRAMES+f];}
+    for(var f2=0;f2<PF;f2++){
+      var fo=f2*HOP_SIZE,i;
+      for(i=0;i<FFT_SIZE;i++){re[i]=0;im[i]=0;}
+      for(var b2=0;b2<PB;b2++){re[b2]=gre[f2*PB+b2];im[b2]=gim[f2*PB+b2];}
+      for(var k=1;k<PB-1;k++){re[FFT_SIZE-k]=re[k];im[FFT_SIZE-k]=-im[k];}
+      ifftInPlace(re,im);
+      for(i=0;i<FFT_SIZE;i++){out[fo+i]+=re[i]*winC[i];wsum[fo+i]+=winC[i]*winC[i];}
+    }
+  }
+  var off=FFT_SIZE/2+Math.floor(HOP_SIZE/2)*3; // 2048+1536=3584
+  return {L:outL.subarray(off,off+WIN),R:outR.subarray(off,off+WIN)};
+}
+/* ---------- 主流程 ---------- */
+async function run(d){
+  initFFT();
+  prog(1,'加载推理引擎…');
+  importScripts(d.ortUrl);
+  var ort=self.ort;
+  if(!ort)throw new Error('推理引擎加载失败');
+  ort.env.wasm.numThreads=1;ort.env.wasm.simd=true;ort.env.wasm.wasmPaths=d.ortBase;
+  if(d.wasmParts){
+    var wbufs=[];
+    for(var wi=0;wi<d.wasmParts.length;wi++){
+      if(cancelled)throw new Error('cancelled');
+      wbufs.push(await fetchAll(d.wasmParts[wi],function(g,t){prog(2+4*g/t,'加载运行时 '+(g/1048576).toFixed(1)+'MB');}));
+    }
+    var wsz=0;wbufs.forEach(function(b){wsz+=b.byteLength;});
+    var wbin=new Uint8Array(wsz),woff=0;
+    wbufs.forEach(function(b){wbin.set(new Uint8Array(b),woff);woff+=b.byteLength;});
+    ort.env.wasm.wasmBinary=wbin.buffer;
+  }
+  var mbufs=[];
+  for(var i=0;i<d.modelChunks.length;i++){
+    if(cancelled)throw new Error('cancelled');
+    var lo=6+i*(12/d.modelChunks.length),hi=6+(i+1)*(12/d.modelChunks.length);
+    mbufs.push(await fetchAll(d.modelChunks[i],function(g,t){prog(lo+(hi-lo)*g/t,'下载模型 '+(g/1048576).toFixed(1)+'MB');}));
+  }
+  var tsz=0;mbufs.forEach(function(b){tsz+=b.byteLength;});
+  var model=new Uint8Array(tsz),off=0;
+  mbufs.forEach(function(b){model.set(new Uint8Array(b),off);off+=b.byteLength;});
+  mbufs=null;
+  if(cancelled)throw new Error('cancelled');
+  prog(18,'初始化 Demucs…');
+  var eps=(typeof navigator!=='undefined'&&navigator.gpu)?['webgpu','wasm']:['wasm'];
+  var session=await ort.InferenceSession.create(model.buffer,{executionProviders:eps,graphOptimizationLevel:'all'});
+  model=null;
+  var L=d.L,R=d.R,exp=d.export,n=L.length;
+  var numSeg=Math.max(1,Math.ceil((n-WIN)/STRIDE)+1);
+  var acc={},wsum=new Float32Array(n);
+  function mkAcc(id){acc[id]=[new Float32Array(n),new Float32Array(n)];}
+  if(exp.vocals)mkAcc('vocals');
+  if(exp.drums)mkAcc('drums');
+  if(exp.bass)mkAcc('bass');
+  if(exp.other)mkAcc('other');
+  var accFromParts=exp.accompaniment&&(exp.drums||exp.bass||exp.other);
+  if(exp.accompaniment&&!accFromParts)mkAcc('accompaniment');
+  var ORDER=['drums','bass','other','vocals'];
+  var segIdx=0;
+  for(var start=0;start<n;start+=STRIDE){
+    if(cancelled)throw new Error('cancelled');
+    var end=Math.min(start+WIN,n),segLen=end-start;
+    prog(18+segIdx/numSeg*78,'AI 推理 '+(segIdx+1)+'/'+numSeg);
+    var pre=prepareSeg(L.subarray(start,end),R.subarray(start,end),segLen);
+    var feed={};
+    feed[session.inputNames[0]]=new ort.Tensor('float32',pre.wave,[1,2,WIN]);
+    if(session.inputNames.length>1)feed[session.inputNames[1]]=new ort.Tensor('float32',pre.x,[1,4,NBINS,NFRAMES]);
+    var res=await session.run(feed);
+    var timeData=null,freqData=null;
+    for(var nm in res){
+      var dm=res[nm].dims;
+      if(dm.length===4&&dm[2]===2)timeData=res[nm].data;
+      else if(dm.length===5&&dm[2]===4)freqData=res[nm].data;
+    }
+    if(!timeData)throw new Error('模型输出异常');
+    // 梯形交叠窗（半 stride 渐变，同 demucs-web）
+    var half=STRIDE*0.5,i;
+    var win=new Float32Array(segLen);
+    for(i=0;i<segLen;i++){
+      var fi=Math.min(i/half,1),fo=Math.min((segLen-i)/half,1);
+      win[i]=Math.min(fi,fo);
+    }
+    var freqAdd=null;
+    if(freqData){freqAdd=[istftTrack(freqData,0),istftTrack(freqData,1),istftTrack(freqData,2),istftTrack(freqData,3)];}
+    for(var t=0;t<4;t++){
+      var a=acc[ORDER[t]],a2=(exp.accompaniment&&!accFromParts&&t<3)?acc['accompaniment']:null;
+      if(!a&&!a2)continue;
+      var tb=t*2*WIN;
+      for(i=0;i<segLen;i++){
+        var l=timeData[tb+i],r=timeData[tb+WIN+i];
+        if(freqAdd){l+=freqAdd[t].L[i];r+=freqAdd[t].R[i];}
+        var w=win[i];
+        if(a){a[0][start+i]+=l*w;a[1][start+i]+=r*w;}
+        if(a2){a2[0][start+i]+=l*w;a2[1][start+i]+=r*w;}
+      }
+    }
+    for(i=0;i<segLen;i++)wsum[start+i]+=win[i];
+    segIdx++;
+  }
+  prog(97,'合成输出…');
+  var outStems={},PEAKS=240;
+  function mkPeaks(Lc,Rc){
+    var pk=new Float32Array(PEAKS),step=Math.max(1,Math.floor(n/PEAKS));
+    for(var q=0;q<PEAKS;q++){
+      var mx=0,sA=q*step,sB=Math.min(n,sA+step);
+      for(var s5=sA;s5<sB;s5+=7){var v1=Lc[s5]<0?-Lc[s5]:Lc[s5],v2=Rc[s5]<0?-Rc[s5]:Rc[s5];if(v1>mx)mx=v1;if(v2>mx)mx=v2;}
+      pk[q]=mx;
+    }
+    return pk;
+  }
+  Object.keys(acc).forEach(function(id){
+    var a=acc[id];
+    for(var i3=0;i3<n;i3++){var w3=wsum[i3]||1;a[0][i3]/=w3;a[1][i3]/=w3;}
+    outStems[id]={L:a[0],R:a[1],peaks:mkPeaks(a[0],a[1])};
+  });
+  if(accFromParts){ // 伴奏 = 鼓+贝斯+其他 三轨之和
+    var aL=new Float32Array(n),aR=new Float32Array(n);
+    ['drums','bass','other'].forEach(function(id){
+      if(!acc[id])return;var a=acc[id];
+      for(var i4=0;i4<n;i4++){aL[i4]+=a[0][i4];aR[i4]+=a[1][i4];}
+    });
+    outStems['accompaniment']={L:aL,R:aR,peaks:mkPeaks(aL,aR)};
+  }
+  self.postMessage({type:'done',sr:44100,stems:outStems,duration:n/44100});
+}
+</script>
+
 <!-- MP3 编码器（lamejs，本地内嵌） -->
 <script id="lamejs-embed">
 function lamejs(){function X(c){return new Int32Array(c)}function K(c){return new Float32Array(c)}function ca(c){if(1==c.length)return K(c[0]);var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(ca(c));return n}function Ia(c){if(1==c.length)return X(c[0]);var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(Ia(c));return n}function dc(c){if(1==c.length)return new Int16Array(c[0]);var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(dc(c));return n}function Ob(c){if(1==c.length)return Array(c[0]);
@@ -1727,7 +1967,7 @@ var STEMS=[
 var MDESC={
   swift:'<b>Swift 极速</b> — FFT 1024 / 50% 重叠，几分钟的歌十几秒出结果，适合快速试听。',
   balanced:'<b>Balanced 均衡（推荐）</b> — FFT 2048 + 9 点中值 HPSS，速度与音质平衡，日常使用首选。',
-  ultra:'<b>Ultra 旗舰</b> — FFT 4096 + 二轮维纳精修，分离边界最干净，处理时间约为均衡档 1.5 倍。'
+  ai:'<b>AI 旗舰（HT-Demucs 深度分离）</b> — Meta 开源 SOTA 模型本地推理，人声/伴奏边界最干净。首次使用需下载模型（约 86MB，之后走浏览器缓存），推理较慢，建议台式机/高端手机使用；失败会自动回退均衡引擎。'
 };
 var MAXDUR=300; // 最长 5 分钟
 
@@ -1966,6 +2206,9 @@ function onWMsg(e){
   if(d.type==='progress'){islandProgress(d.pct,d.phase);}
   else if(d.type==='done'){onDone(d);}
   else if(d.type==='error'){
+    if(d.message!=='cancelled'&&aiWorker&&state.model==='ai'){
+      aiFail(new Error(d.message));return;
+    }
     state.busy=false;island('idle');refreshGo();
     if(d.message!=='cancelled')toast('分离失败：'+d.message);
     else toast('已取消');
@@ -2009,20 +2252,80 @@ $('goBtn').onclick=function(){
   STEMS.forEach(function(s){if(s.on){exp[s.id]=true;any=true;}});
   if(!any){toast('请至少选择一个导出声部');return;}
   clearStems();
-  state.busy=true;refreshGo();
+  state.busy=true;state.pendingExport=exp;refreshGo();
   island('busy');islandProgress(0,'准备中…');
   t0=performance.now();
-  var w=getWorker();
   // 从 Int16 主副本重建 Float32 并转移给 Worker
   var n=state.file.iL.length;
   var L=new Float32Array(n),R=new Float32Array(n);
   for(var i=0;i<n;i++){L[i]=state.file.iL[i]/32767;R[i]=state.file.iR[i]/32767;}
-  w.postMessage({cmd:'separate',L:L,R:R,sr:state.file.sr,model:state.model,export:exp},[L.buffer,R.buffer]);
+  if(state.model==='ai'){
+    startAi(L,R,state.file.sr,exp);
+  }else{
+    var w=getWorker();
+    w.postMessage({cmd:'separate',L:L,R:R,sr:state.file.sr,model:state.model,export:exp},[L.buffer,R.buffer]);
+  }
 };
 $('iCancel').onclick=function(){
   if(worker){worker.terminate();worker=null;}
+  if(aiWorker){aiWorker.terminate();aiWorker=null;}
   state.busy=false;island('idle');refreshGo();toast('已取消');
 };
+
+/* ---------- AI 引擎（HT-Demucs ONNX · 分块加载 + 本地推理） ---------- */
+var aiWorker=null;
+function getAiWorker(){
+  if(aiWorker)return aiWorker;
+  var src=$('ai-src').textContent;
+  var url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
+  aiWorker=new Worker(url);
+  aiWorker.onmessage=onWMsg;
+  return aiWorker;
+}
+function aiUrls(){
+  var b=location.href.replace(/[^\/]*$/,'');
+  return {
+    ortUrl:b+'ort/ort.webgpu.min.js?v=1',
+    ortBase:b+'ort/',
+    wasmParts:[b+'ort/ort-wasm.jsep.p0.bin?v=1',b+'ort/ort-wasm.jsep.p1.bin?v=1'],
+    chunks:['aa','ab','ac','ad'].map(function(s){return b+'models/htdemucs.fp16.'+s+'.bin?v=1';})
+  };
+}
+function resampleTo44k(L,R,sr){
+  if(sr===44100)return Promise.resolve({L:L,R:R,sr:44100});
+  return new Promise(function(res,rej){
+    try{
+      var len=Math.max(1,Math.ceil(L.length*44100/sr));
+      var off=new OfflineAudioContext(2,len,44100);
+      var b=ctx().createBuffer(2,L.length,sr);
+      b.copyToChannel(L,0);b.copyToChannel(R,1);
+      var s=off.createBufferSource();s.buffer=b;s.connect(off.destination);s.start();
+      off.startRendering().then(function(rb){
+        res({L:rb.getChannelData(0).slice(0),R:rb.getChannelData(1).slice(0),sr:44100});
+      }).catch(rej);
+    }catch(e){rej(e);}
+  });
+}
+function startAi(L,R,sr,exp){
+  islandProgress(1,'AI 引擎准备…');
+  var u=aiUrls();
+  resampleTo44k(L,R,sr).then(function(r){
+    if(!state.busy)return; // 已取消
+    var w=getAiWorker();
+    w.postMessage({cmd:'separate',L:r.L,R:r.R,sr:r.sr,ortUrl:u.ortUrl,ortBase:u.ortBase,wasmParts:u.wasmParts,modelChunks:u.chunks,export:exp},[r.L.buffer,r.R.buffer]);
+  }).catch(function(){aiFail(new Error('重采样失败'));});
+}
+function aiFail(e){
+  if(!state.busy)return;
+  if(aiWorker){aiWorker.terminate();aiWorker=null;}
+  toast('AI 引擎不可用（'+(e&&e.message||e)+'），已切换均衡引擎');
+  var n=state.file.iL.length;
+  var L2=new Float32Array(n),R2=new Float32Array(n);
+  for(var i=0;i<n;i++){L2[i]=state.file.iL[i]/32767;R2[i]=state.file.iR[i]/32767;}
+  islandProgress(0,'均衡引擎…');
+  var w=getWorker();
+  w.postMessage({cmd:'separate',L:L2,R:R2,sr:state.file.sr,model:'balanced',export:state.pendingExport||{vocals:true}},[L2.buffer,R2.buffer]);
+}
 
 /* ---------- 播放 ---------- */
 function stopSources(){
