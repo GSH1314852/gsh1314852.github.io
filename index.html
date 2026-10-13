@@ -998,6 +998,7 @@ body[data-md="dark"] .live-status.warn{background:rgba(229,72,77,.14)}
     </div>
     <p class="mdesc" id="mdesc"></p>
     <p class="hint" id="wgHint" style="margin-top:4px"></p>
+    <p class="hint" id="warmLine" style="margin-top:2px;color:var(--c-oth)"></p>
   </section>
 
   <section class="card">
@@ -1269,7 +1270,7 @@ body[data-md="dark"] .live-status.warn{background:rgba(229,72,77,.14)}
         <span class="ai-lb">时长 <b id="genDurTx">10 秒</b></span>
         <input id="genDur" type="range" min="5" max="30" step="5" value="10">
       </div>
-      <div class="ai-gen-tips">由 Meta 开源 MusicGen 模型在你的浏览器本地生成<b>纯音乐</b>（无人声演唱）。首次使用需下载模型（约 300MB，之后走浏览器缓存）；生成需 1~5 分钟，建议电脑 Chrome/Edge（WebGPU 加速）。</div>
+      <div class="ai-gen-tips">本地生成<b>纯音乐</b>（无人声）。首次需下载模型约 300MB（之后秒开），生成 1~5 分钟，建议电脑 Chrome/Edge。</div>
     </section>
     <button class="go" id="genGo"><span class="glow"></span><span id="genGoTx">🎵 生 成 音 乐</span></button>
     <section class="card hidden" id="genStat">
@@ -1330,7 +1331,7 @@ body[data-md="dark"] .live-status.warn{background:rgba(229,72,77,.14)}
     </section>
   </div>
 
-  <p class="hint ai-note">写词/聊天由免费开放接口提供（Pollinations · GPT-OSS 20B 等，可接入自定义模型）；绘画由免费开源服务 Pollinations 生成；生成音乐由开源 MusicGen 模型<b>在你的设备本地</b>完成；真人聊天经公共 MQTT 服务器实时转发不留存。使用计数由免费公共服务 Abacus 统计。AI 生成内容仅供参考。</p>
+  <p class="hint ai-note">写词与绘画由 Pollinations 免费开放接口提供；音乐在你的设备本地生成；聊天经公共服务器实时转发不留存。AI 生成内容仅供参考。</p>
   </div>
 
   <!-- 真人聊天室（独立页） -->
@@ -2389,10 +2390,10 @@ var STEMS=[
 ];
 var MDESC={
   swift:'<b>Swift 极速</b> — FFT 1024 / 50% 重叠，几分钟的歌十几秒出结果，适合快速试听。',
-  balanced:'<b>Balanced 均衡（推荐）</b> — FFT 2048 + 9 点中值 HPSS，速度与音质平衡，日常使用首选。',
-  ai:'<b>AI 旗舰（HT-Demucs 深度分离）</b> — Meta 开源 SOTA 模型本地推理，人声/伴奏边界最干净。首次使用需下载模型（约 86MB，模型会持久缓存，之后秒开），推理速度取决于设备：支持 WebGPU 的 Chrome/Edge 很快，否则走 CPU 较慢；失败会自动回退均衡引擎。',
-  scnet:'<b>SCNet XL 旗舰（新）</b> — 目前 GitHub 开源方案中浏览器可运行的顶级分离模型（SCNet-XL Wide v5，unblend 项目），音质与声部边界显著优于 HT-Demucs。需 WebGPU（Chrome/Edge 新版）+ 约 110MB 模型下载（持久缓存，之后秒开），仅建议台式机使用；失败请切回 AI 旗舰。',
-  ht6s:'<b>6 轨精分（新）</b> — HT-Demucs 六轨版：在人声/鼓/贝斯/其他之外，额外分离出<b>吉他</b>与<b>钢琴</b>两个独立声部（模型约 53MB，持久缓存）。支持 WebGPU 与 CPU 双模式，WebGPU 下速度最快。'
+  balanced:'<b>Balanced 均衡（推荐）</b> — 速度音质平衡，无需下载模型。',
+  ai:'<b>AI 旗舰</b> — HT-Demucs 深度分离，人声伴奏最干净。首次下载 86MB（持久缓存秒开），无 WebGPU 时较慢。',
+  scnet:'<b>SCNet XL</b> — 开源最强分离，音质显著优于 HT-Demucs。需 WebGPU + 110MB 下载（持久缓存），建议台式机。',
+  ht6s:'<b>6 轨精分</b> — 额外分离<b>吉他</b>与<b>钢琴</b>（53MB，持久缓存），WebGPU 下最快。'
 };
 var MAXDUR=300; // 最长 5 分钟
 
@@ -2400,7 +2401,7 @@ var MAXDUR=300; // 最长 5 分钟
 function wgHint(t){var el=document.getElementById('wgHint');if(el)el.textContent=t;}
 var WG_OK=false;
 (function(){
-  var done=function(ok){WG_OK=ok;wgHint(ok?'本机支持 WebGPU 加速：AI 旗舰 / SCNet XL / 6 轨精分将高速运行；模型只需下载一次，之后持久缓存秒开':'本机无 WebGPU：AI 旗舰 / 6 轨精分将走较慢的 CPU 模式，建议用新版 Chrome/Edge 或选 Swift/Balanced 档');};
+  var done=function(ok){WG_OK=ok;wgHint(ok?'本机支持 WebGPU 加速，AI 档将高速运行':'本机无 WebGPU，AI 档走较慢的 CPU 模式，建议用新版 Chrome/Edge');};
   try{
     if(!navigator.gpu){done(false);return;}
     navigator.gpu.requestAdapter().then(function(a){done(!!a);}).catch(function(){done(false);});
@@ -2420,7 +2421,11 @@ var actx=null,srcs=[],gains={},master=null;
 
 /* ---------- 灵动岛 ---------- */
 function island(m){document.body.dataset.island=m;}
+var _ipT=0,_ipP='';
 function islandProgress(pct,phase){
+  var now=Date.now();
+  if(pct<100&&phase===_ipP&&now-_ipT<80)return; // 节流：高频进度回调只每 80ms 写一次 DOM
+  _ipT=now;_ipP=phase;
   $('iBar').style.width=pct+'%';$('iPct').textContent=pct+'%';$('iPhase').textContent=phase;
 }
 function islandNow(){
@@ -2462,6 +2467,7 @@ function refreshExtraChips(){
 function setModel(m,btn){
   if(m==='scnet'&&!navigator.gpu){toast('SCNet XL 需要 WebGPU（新版 Chrome/Edge），本设备不支持');return;}
   state.model=m;
+  try{localStorage.setItem('sg-last-model',m);}catch(e){}
   segBtns.forEach(function(b){b.classList.toggle('on',b===btn);});
   var r=btn.getBoundingClientRect(),pr=$('seg').getBoundingClientRect();
   $('segThumb').style.left=(r.left-pr.left)+'px';$('segThumb').style.width=r.width+'px';
@@ -2781,9 +2787,10 @@ var ubMod=null,ubSep=null,ubKey=null,ubCtrl=null;
 var UB_TOTAL={scnet:114857118,ht6s:55845005};
 function cacheGet(url,onp){
   // Cache API 持久缓存：模型只真正下载一次，之后秒开
+  if(cacheGet._if&&cacheGet._if[url])return cacheGet._if[url]; // 预热与分离并发同块时共享在途请求
   var useCache=(typeof caches!=='undefined');
   var openP=useCache?caches.open('sg-models-v1'):Promise.reject();
-  return openP.then(function(c){
+  var p=openP.then(function(c){
     return c.match(url).then(function(hit){
       if(hit)return hit.arrayBuffer();
       return fetch(url).then(function(r){
@@ -2805,21 +2812,32 @@ function cacheGet(url,onp){
     });
   }).catch(function(){
     return fetch(url).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer();});
-  });
+  }).finally(function(){if(cacheGet._if)delete cacheGet._if[url];});
+  (cacheGet._if=cacheGet._if||{})[url]=p;
+  return p;
 }
-function fetchParts(urls,total,onp){
+function fetchParts(urls,total,onp,noJoin){
+  // 3 路并发分块下载，按序拼接（GitHub Pages 单流慢，并发显著提速）；noJoin=true 仅写缓存不拼接
   return new Promise(function(res,rej){
-    var out=new Uint8Array(total),off=0,i=0;
-    function next(){
-      if(i>=urls.length){res(out.buffer);return;}
-      var from=off;
-      cacheGet(urls[i],function(g){if(onp)onp((from+g)/total);}).then(function(ab){
-        if(ab.byteLength>total-off)throw new Error('模型分块异常');
-        out.set(new Uint8Array(ab),off);off+=ab.byteLength;i++;
-        onp(off/total);next();
-      }).catch(rej);
+    var bufs=new Array(urls.length),got=new Array(urls.length).fill(0),fin=0,next=0,dead=false;
+    function prog(){var s=0;for(var i=0;i<got.length;i++)s+=got[i];if(onp)onp(Math.min(1,s/total));}
+    function one(){
+      if(dead)return;
+      var i=next++;
+      if(i>=urls.length)return;
+      cacheGet(urls[i],function(g){got[i]=g;prog();}).then(function(ab){
+        if(dead)return;
+        if(ab.byteLength>total)throw new Error('模型分块异常');
+        bufs[i]=ab;got[i]=ab.byteLength;fin++;prog();
+        if(fin>=urls.length){
+          if(noJoin){res(null);return;}
+          var out=new Uint8Array(total),o=0;
+          for(var k=0;k<bufs.length;k++){if(o+bufs[k].byteLength>total)throw new Error('模型分块异常');out.set(new Uint8Array(bufs[k]),o);o+=bufs[k].byteLength;}
+          res(out.buffer);
+        }else one();
+      }).catch(function(e){if(dead)return;dead=true;rej(e);});
     }
-    next();
+    for(var s=0;s<Math.min(3,urls.length);s++)one();
   });
 }
 function ubPeaks(Lc,Rc){
@@ -2831,6 +2849,39 @@ function ubPeaks(Lc,Rc){
   }
   return pk;
 }
+/* ---------- 模型预下载：页面打开后空闲时静默把分离模型写进持久缓存，点分离零等待 ---------- */
+function warmSpec(key){
+  var b=location.href.replace(/[^\/]*$/,'');
+  if(key==='scnet')return{p:['aa','ab','ac','ad','ae'],f:'scnetxl.fp16.',t:UB_TOTAL.scnet,b:b};
+  if(key==='ht6s')return{p:['aa','ab','ac'],f:'ht6s.fp16.',t:UB_TOTAL.ht6s,b:b};
+  return{p:['aa','ab','ac','ad'],f:'htdemucs.fp16.',t:91593440+28312028+46851,b:b,extra:[b+'ort/ort-wasm.jsep.p0.bin?v=1',b+'ort/ort-wasm.jsep.p1.bin?v=1',b+'ort/ort-wasm-simd-threaded.jsep.mjs?v=1']};
+}
+function warmQueue(){
+  var last=null;try{last=localStorage.getItem('sg-last-model');}catch(e){}
+  var q=[];
+  if(last==='scnet'&&navigator.gpu)q.push('scnet');
+  else if(last==='ht6s')q.push('ht6s');
+  else if(last==='ai')q.push('ai');
+  if(navigator.gpu){if(q.indexOf('scnet')<0)q.push('scnet');if(q.indexOf('ht6s')<0)q.push('ht6s');}
+  else{if(q.indexOf('ht6s')<0)q.push('ht6s');}
+  if(q.indexOf('ai')<0)q.push('ai');
+  return q;
+}
+function warmModels(){
+  if(!navigator.onLine||typeof caches==='undefined')return;
+  var q=warmQueue(),i=0;
+  (function nx(){
+    if(i>=q.length){var el=$('warmLine');if(el)el.textContent='✓ 分离模型已预载，分离零等待';return;}
+    var sp=warmSpec(q[i++]);
+    var urls=sp.p.map(function(s){return sp.b+'models/'+sp.f+s+'.bin?v=1';});
+    if(sp.extra)urls=urls.concat(sp.extra);
+    fetchParts(urls,sp.t,function(f){
+      var el=$('warmLine');if(el)el.textContent='模型预载 '+Math.round(f*100)+'%…（后台进行，不影响使用）';
+    },true).then(function(){setTimeout(nx,1200);})
+      .catch(function(){setTimeout(nx,3000);});
+  })();
+}
+setTimeout(warmModels,6000);
 async function startUB(L,R,sr,exp){
   var b=location.href.replace(/[^\/]*$/,'');
   try{
@@ -2873,13 +2924,20 @@ async function startUB(L,R,sr,exp){
     });
     if(!state.busy)return;
     islandProgress(97,'合成输出…');
-    var out={};
+    var out={},gPk=0;
     Object.keys(res.stems).forEach(function(id){
       var il=res.stems[id],n2=il.length>>1;
       var L2=new Float32Array(n2),R2=new Float32Array(n2);
       for(var q=0;q<n2;q++){L2[q]=il[q*2];R2[q]=il[q*2+1];}
-      out[id]={L:L2,R:R2,peaks:ubPeaks(L2,R2)};
+      // 全局峰值检测：所有声部共用一个增益，保持"叠加=原曲"
+      for(q=0;q<n2;q++){var a1=L2[q]<0?-L2[q]:L2[q];if(a1>gPk)gPk=a1;var a2=R2[q]<0?-R2[q]:R2[q];if(a2>gPk)gPk=a2;}
+      out[id]={L:L2,R:R2};
     });
+    if(gPk>0.985){
+      var gn=0.985/gPk;
+      Object.keys(out).forEach(function(id){var s=out[id];for(var q=0;q<s.L.length;q++){s.L[q]*=gn;s.R[q]*=gn;}});
+    }
+    Object.keys(out).forEach(function(id){out[id].peaks=ubPeaks(out[id].L,out[id].R);});
     onDone({sr:44100,duration:ab.duration,stems:out});
   }catch(e){
     if(!state.busy)return;
@@ -2887,9 +2945,9 @@ async function startUB(L,R,sr,exp){
     state.busy=false;island('idle');refreshGo();
     var msg=(e&&e.message)||String(e);
     var tip;
-    if(/需要 WebGPU/.test(msg))tip='旗舰引擎需要 WebGPU（新版 Chrome/Edge），请改用「AI 旗舰」或「均衡」档';
-    else if(/HTTP|Failed to fetch|NetworkError|加载|下载|fetch/.test(msg))tip='模型下载失败（网络原因），已持久缓存的分块不会重复下载；请检查网络后重试';
-    else tip='旗舰引擎不可用（'+msg+'），请改用「AI 旗舰」或「均衡」档';
+    if(/需要 WebGPU/.test(msg))tip='此档需要 WebGPU（新版 Chrome/Edge），请改用「AI 旗舰」或「均衡」';
+    else if(/HTTP|Failed to fetch|NetworkError|加载|下载|fetch/.test(msg))tip='模型下载失败，请检查网络后重试（已缓存的分块不会重复下载）';
+    else tip='引擎不可用（'+msg+'），请换用其他档位';
     toast(tip);
   }
 }
