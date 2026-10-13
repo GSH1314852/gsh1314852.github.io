@@ -4662,7 +4662,7 @@ var BROKERS=[
 ];
 var LTOP='stemglass-gsh/chat/',LPRE='stemglass-gsh/presence/';
 var ROOM_NAME={hall:'大厅',pop:'流行',folk:'民谣',rock:'摇滚',rap:'说唱'};
-var live={cli:null,roomId:'hall',myId:'u'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),members:{},hbTm:null,gcTm:null,watchTm:null,brokerIdx:0,inited:false,fails:0,retryTm:null,connected:false,needsClear:true};
+var live={cli:null,roomId:'hall',myId:'u'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),members:{},hbTm:null,gcTm:null,watchTm:null,probeTm:null,brokerIdx:0,inited:false,fails:0,retryTm:null,connected:false,needsClear:true};
 var liveDefNick='游客'+Math.floor(1000+Math.random()*9000);
 function liveNick(){
   var n=E('liveNick').value.trim();
@@ -4775,6 +4775,7 @@ function liveConnect(){
   if(!window.mqtt){liveStat('bad','聊天组件未加载，请刷新页面');return;}
   clearTimeout(live.retryTm);live.retryTm=null;
   clearTimeout(live.watchTm);
+  clearInterval(live.probeTm);
   if(live.cli){var old=live.cli;live.cli=null;try{old.end(true);}catch(e){}}
   clearInterval(live.hbTm);clearInterval(live.gcTm);
   live.connected=false;
@@ -4817,6 +4818,27 @@ function liveConnect(){
       });
       if(ch)liveCount();
     },10000);
+    /* 管道探针：公共节点偶发"已连接但收发隔离"，收不到自己的回包就切节点 */
+    clearInterval(live.probeTm);
+    var probeOnce=function(){
+      if(live.cli!==c||!live.connected)return;
+      var pt='stemglass-gsh/probe/'+live.myId,got=false;
+      var h=function(t){
+        if(t===pt){got=true;c.removeListener('message',h);}
+      };
+      c.on('message',h);
+      c.subscribe(pt,{qos:1},function(){
+        if(live.cli===c&&live.connected)c.publish(pt,'1',{qos:1});
+      });
+      setTimeout(function(){
+        c.removeListener('message',h);
+        if(live.cli!==c||!live.connected||got)return;
+        liveStat('bad','节点管道异常，正在切换…');
+        try{c.end(true);}catch(e){}
+      },5000);
+    };
+    setTimeout(probeOnce,1500);
+    live.probeTm=setInterval(probeOnce,30000);
   });
   c.on('reconnect',function(){if(live.cli===c&&!live.connected)liveStat('','重连中…');});
   c.on('close',function(){
