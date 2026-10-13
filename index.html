@@ -830,34 +830,52 @@ main{padding-bottom:calc(var(--sab) + 106px)}
 /* ---------- 独立聊天页 / 生成歌曲 ---------- */
 #page-chat.on{display:flex;flex-direction:column;height:calc(100dvh - var(--sat) - var(--sab) - 200px);min-height:430px}
 .chat-hero{display:flex;align-items:baseline;gap:10px;padding:2px 2px 0;flex-wrap:wrap}
-.chat-hero h1{font-size:23px;font-weight:800;color:var(--ink);letter-spacing:.01em}
+.chat-hero h1{font-size:23px;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:.01em}
 .chat-hero p{font-size:12px;color:var(--faint)}
 .chat-rooms{display:flex;gap:8px;overflow-x:auto;padding:10px 2px;scrollbar-width:none;flex:none}
 .chat-rooms::-webkit-scrollbar{display:none}
-.chat-rooms .chip{flex:none;font-size:12.5px;padding:8px 16px}
-.chat-panel{flex:1;display:flex;flex-direction:column;min-height:0;padding:14px}
-.chat-panel .live-status{flex:none;margin-bottom:8px}
-.chat-panel .live-members{flex:none;margin-bottom:8px}
-.chat-panel .live-list{flex:1;min-height:0;max-height:none;padding-right:2px}
+.chat-rooms .chip{flex:none;font-size:12.5px;padding:8px 15px;border-radius:999px}
+.chat-panel{flex:1;display:flex;flex-direction:column;min-height:0;padding:12px 14px}
+.chat-panel .live-status{flex:none;margin-bottom:6px}
+.chat-panel .live-members{flex:none;margin-bottom:6px}
+.chat-panel .live-list{flex:1;min-height:0;max-height:none;padding:4px 4px 4px 2px;display:flex;flex-direction:column;overflow-y:auto}
 .chat-dock{flex:none;display:flex;gap:8px;align-items:flex-end;padding:10px 2px 0}
 .chat-dock .ai-chat-inputrow{flex:1;margin-top:0}
 .chat-nick{flex:none;width:88px;font-size:12.5px;padding:9px 10px;border-radius:12px;border:1px solid var(--stroke);background:var(--card);color:var(--ink)}
 .chat-foot{margin-top:6px;padding:0 2px}
-.live-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--faint);margin-bottom:8px}
+.live-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--faint);margin-bottom:8px;padding:7px 12px;border-radius:12px;background:var(--soft);border:1px solid var(--stroke);transition:.25s}
+.live-status.warn{background:rgba(229,72,77,.08);border-color:rgba(229,72,77,.35);color:#c73a3f}
 .live-dot{width:8px;height:8px;border-radius:50%;background:#c7cdd6;flex:none;transition:background .3s}
-.live-dot.ok{background:#1fa95c;box-shadow:0 0 0 3px rgba(31,169,92,.15)}
+.live-dot.ok{background:#1fa95c;box-shadow:0 0 0 3px rgba(31,169,92,.15);animation:livePulse 2s ease infinite}
 .live-dot.bad{background:#e5484d}
+@keyframes livePulse{0%,100%{box-shadow:0 0 0 3px rgba(31,169,92,.15)}50%{box-shadow:0 0 0 6px rgba(31,169,92,.05)}}
 .live-online{margin-left:auto;color:var(--muted)}
 .live-online b{color:var(--ink)}
-.live-members{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:24px}
+.live-members{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:24px}
 .live-members .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:999px;background:var(--soft);border:1px solid var(--stroke);color:var(--muted)}
 .live-members .pill i{width:6px;height:6px;border-radius:50%;background:#1fa95c;flex:none}
 .live-members .pill.me{border-color:var(--acc);color:var(--ink)}
 .live-list{max-height:44vh}
-.live-msg{max-width:85%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
-.live-msg .lm-nick{display:block;font-size:10.5px;opacity:.65;margin-bottom:2px}
-.live-msg.o{align-self:flex-start;background:var(--soft);border:1px solid var(--stroke);border-bottom-left-radius:5px}
-.live-msg.me{align-self:flex-end;background:var(--grad);color:#fff;border-bottom-right-radius:5px}
+.live-row{display:flex;gap:8px;align-items:flex-end;margin-top:7px;animation:lmin .28s cubic-bezier(.2,.9,.3,1.2)}
+.live-row.cont{margin-top:2px}
+.live-row.cont .lm-ava{visibility:hidden}
+.live-row.cont .lm-meta{display:none}
+.live-row.me{flex-direction:row-reverse}
+.lm-ava{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.18);box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.live-row.me .lm-ava{background:var(--grad)!important}
+.lm-col{max-width:78%;min-width:0;display:flex;flex-direction:column}
+.live-row.me .lm-col{align-items:flex-end}
+.lm-meta{display:flex;gap:6px;align-items:baseline;font-size:10.5px;color:var(--faint);padding:0 4px 3px}
+.lm-time{opacity:.8}
+.live-msg{padding:8px 12px;border-radius:14px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.live-msg.o{background:var(--card);border:1px solid var(--stroke);border-top-left-radius:5px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.live-msg.me{background:var(--grad);color:#fff;border-top-right-radius:5px;box-shadow:0 2px 8px rgba(124,108,255,.25)}
+.live-list .ai-msg.sys{align-self:center;text-align:center;font-size:11px;color:var(--faint);background:var(--soft);border:1px solid var(--stroke);border-radius:999px;padding:4px 14px;margin:8px auto 2px;max-width:92%}
+.live-empty{margin:auto;text-align:center;color:var(--faint);padding:26px 10px;animation:lmin .3s}
+.live-empty .le-ico{font-size:34px;margin-bottom:8px}
+.live-empty p{font-size:13px;color:var(--muted);margin:0 0 4px}
+.live-empty .le-sub{font-size:11.5px;color:var(--faint)}
+@keyframes lmin{from{opacity:0;transform:translateY(7px) scale(.98)}to{opacity:1;transform:none}}
 .gen-prog{display:flex;align-items:center;gap:12px}
 .gp-bar{flex:1;height:8px;border-radius:99px;background:var(--soft);border:1px solid var(--stroke);overflow:hidden}
 .gp-bar i{display:block;height:100%;width:0%;border-radius:99px;background:var(--grad);transition:width .4s}
@@ -868,6 +886,10 @@ main{padding-bottom:calc(var(--sab) + 106px)}
 #genDur{width:100%;accent-color:#1fa95c}
 body[data-md="dark"] .live-msg.o{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.10);color:#f5f5fa}
 body[data-md="dark"] .live-members .pill{background:rgba(255,255,255,.05)}
+body[data-md="dark"] .live-list .ai-msg.sys{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.10)}
+body[data-md="dark"] .chat-nick{background:rgba(255,255,255,.05)}
+body[data-md="dark"] .live-status{background:rgba(255,255,255,.04)}
+body[data-md="dark"] .live-status.warn{background:rgba(229,72,77,.14)}
 </style>
 </head>
 <body data-island="idle" data-md="dark">
@@ -1170,6 +1192,7 @@ body[data-md="dark"] .live-members .pill{background:rgba(255,255,255,.05)}
     <button data-ai="song" class="on">写歌工坊</button>
     <button data-ai="gen">生成歌曲</button>
     <button data-ai="chat">AI 伙伴</button>
+    <button data-ai="img">AI 绘画</button>
   </div>
 
   <div id="aiSongPane">
@@ -1275,14 +1298,46 @@ body[data-md="dark"] .live-members .pill{background:rgba(255,255,255,.05)}
     </section>
   </div>
 
-  <p class="hint ai-note">写词/聊天由免费开放接口提供（Pollinations · GPT-OSS 20B 等，可接入自定义模型）；生成音乐由开源 MusicGen 模型<b>在你的设备本地</b>完成；真人聊天经公共 MQTT 服务器实时转发不留存。使用计数由免费公共服务 Abacus 统计。AI 生成内容仅供参考。</p>
+  <!-- AI 绘画（Pollinations 免费生成） -->
+  <div id="aiImgPane" class="hidden">
+    <section class="card">
+      <h2><span class="stepchip">1</span>描述想要的画面 <em>免费生成 · 无需注册</em></h2>
+      <div class="ai-field">
+        <span class="ai-lb">画面描述</span>
+        <div class="urlrow"><textarea id="imgPrompt" rows="2" placeholder="如：星空下的吉他手，赛博朋克风格，霓虹灯光，细节丰富（描述越具体效果越好）" maxlength="300"></textarea></div>
+      </div>
+      <div class="ai-field">
+        <span class="ai-lb">画面比例</span>
+        <div class="chips ai-chips" id="imgSizeChips">
+          <button class="chip on" data-v="1024x1024">方形 1:1</button>
+          <button class="chip" data-v="832x1216">竖版 3:4</button>
+          <button class="chip" data-v="1216x832">横版 16:9</button>
+        </div>
+      </div>
+      <div class="ai-gen-tips">由免费开源服务 Pollinations 绘制，通常 5~20 秒；可描述<b>风格、光线、场景、细节</b>，支持中文。</div>
+    </section>
+    <button class="go" id="imgGo"><span class="glow"></span><span id="imgGoTx">🎨 生 成 图 片</span></button>
+    <section class="card hidden" id="imgCard">
+      <h2><span class="stepchip">✓</span>生成结果 <em id="imgMeta"></em></h2>
+      <div class="ai-cover-wrap">
+        <img id="imgOut" alt="AI 生成图片">
+        <div class="ai-cover-load" id="imgLoad">绘制中，通常 5~20 秒…</div>
+      </div>
+      <div class="btnrow">
+        <button class="gbtn pri" id="imgDl">下载图片</button>
+        <button class="gbtn" id="imgRegen">换一张</button>
+      </div>
+    </section>
+  </div>
+
+  <p class="hint ai-note">写词/聊天由免费开放接口提供（Pollinations · GPT-OSS 20B 等，可接入自定义模型）；绘画由免费开源服务 Pollinations 生成；生成音乐由开源 MusicGen 模型<b>在你的设备本地</b>完成；真人聊天经公共 MQTT 服务器实时转发不留存。使用计数由免费公共服务 Abacus 统计。AI 生成内容仅供参考。</p>
   </div>
 
   <!-- 真人聊天室（独立页） -->
   <div id="page-chat" class="page">
     <div class="chat-hero">
       <h1>聊天室</h1>
-      <p>真人实时聊天 · 不留存历史</p>
+      <p>和在线乐友实时畅聊 · 消息不留存</p>
     </div>
     <div class="chips chat-rooms" id="roomChips">
       <button class="chip on" data-room="hall">🏛 大厅</button>
@@ -1292,12 +1347,12 @@ body[data-md="dark"] .live-members .pill{background:rgba(255,255,255,.05)}
       <button class="chip" data-room="rap">🎤 说唱</button>
     </div>
     <section class="card chat-panel">
-      <div class="live-status">
+      <div class="live-status" id="liveStatRow">
         <span class="live-dot" id="liveDot"></span><span id="liveStatTx">未连接</span>
         <span class="live-online"><b id="liveCnt">1</b> 人在线</span>
       </div>
       <div class="live-members" id="liveMembers"></div>
-      <div class="ai-chat-list live-list" id="liveList"></div>
+      <div class="live-list" id="liveList"></div>
     </section>
     <div class="chat-dock">
       <input id="liveNick" class="chat-nick" type="text" maxlength="12" placeholder="昵称">
@@ -2443,7 +2498,7 @@ async function decodeBuffer(arrayBuffer){
     var buf=await c.decodeAudioData(arrayBuffer.slice(0));
     if(buf.sampleRate!==c.sampleRate)return buf;
     return buf;
-  }catch(err){throw new Error('解码失败：不支持的音频格式');}
+  }catch(err){throw new Error('解码失败：该格式不受支持（建议改用 MP3 / WAV / M4A）');}
 }
 
 async function loadFile(f){
@@ -2789,6 +2844,7 @@ async function startUB(L,R,sr,exp){
     var file=m==='scnet'?'scnetxl.fp16.':'ht6s.fp16.';
     var parts=m==='scnet'?['aa','ab','ac','ad','ae']:['aa','ab','ac'];
     if(m==='scnet'&&!navigator.gpu)throw new Error('需要 WebGPU');
+    if(m==='scnet'&&navigator.deviceMemory&&navigator.deviceMemory<4)toast('提示：本机内存较小，SCNet 若卡顿或失败请改用「6 轨」或「均衡」档');
     if(!ubMod)ubMod=await import(b+'vendor/unblend/index.js');
     if(!ubSep||ubKey!==m){
       if(ubSep){try{await ubSep.unload();}catch(e){}ubSep=null;}
@@ -2829,7 +2885,12 @@ async function startUB(L,R,sr,exp){
     if(!state.busy)return;
     if(e&&e.name==='AbortError'){state.busy=false;island('idle');refreshGo();return;}
     state.busy=false;island('idle');refreshGo();
-    toast('旗舰引擎不可用（'+(e&&e.message||e)+'），请改用 AI 旗舰或均衡引擎');
+    var msg=(e&&e.message)||String(e);
+    var tip;
+    if(/需要 WebGPU/.test(msg))tip='旗舰引擎需要 WebGPU（新版 Chrome/Edge），请改用「AI 旗舰」或「均衡」档';
+    else if(/HTTP|Failed to fetch|NetworkError|加载|下载|fetch/.test(msg))tip='模型下载失败（网络原因），已持久缓存的分块不会重复下载；请检查网络后重试';
+    else tip='旗舰引擎不可用（'+msg+'），请改用「AI 旗舰」或「均衡」档';
+    toast(tip);
   }
 }
 
@@ -4401,6 +4462,7 @@ function bindChips(id){
 }
 bindChips('aiStyleChips');bindChips('aiMoodChips');
 function esc(s){return s.replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+function haptic(ms){try{navigator.vibrate&&navigator.vibrate(ms||10);}catch(e){}}
 function renderLyric(t){
   var h='',lines=String(t).replace(/\*\*/g,'').replace(/^#+\s*/gm,'').split(/\r?\n/);
   for(var i=0;i<lines.length;i++){
@@ -4524,21 +4586,83 @@ function showPane(m){
   E('aiSongPane').classList.toggle('hidden',m!=='song');
   E('aiGenPane').classList.toggle('hidden',m!=='gen');
   E('aiChatPane').classList.toggle('hidden',m!=='chat');
+  E('aiImgPane').classList.toggle('hidden',m!=='img');
   if(m==='chat')scrollChat();
 }
 [].forEach.call(E('aiSeg').querySelectorAll('button'),function(b){
   b.onclick=function(){showPane(b.dataset.ai);};
 });
 
-/* ---------- 真人聊天室（独立页 · 公共 MQTT · 自动故障转移） ---------- */
+/* ---------- AI 绘画（Pollinations 免费生成） ---------- */
+var imgSize='1024x1024',imgBusy=false;
+[].forEach.call(E('imgSizeChips').querySelectorAll('.chip'),function(b){
+  b.onclick=function(){
+    [].forEach.call(E('imgSizeChips').querySelectorAll('.chip'),function(x){x.classList.remove('on');});
+    b.classList.add('on');imgSize=b.dataset.v;haptic(6);
+  };
+});
+function imgStart(){
+  if(imgBusy)return;
+  var p=E('imgPrompt').value.trim();
+  if(!p){aiToast('先描述一下想要的画面');E('imgPrompt').focus();return;}
+  imgBusy=true;
+  var wh=imgSize.split('x');
+  E('imgCard').classList.remove('hidden');
+  E('imgLoad').style.display='flex';
+  E('imgLoad').textContent='绘制中，通常 5~20 秒…';
+  E('imgOut').style.opacity='0';
+  E('imgGoTx').textContent='⏳ 绘制中…';
+  E('imgGo').disabled=true;
+  var img=E('imgOut');
+  img.onload=function(){
+    imgBusy=false;
+    E('imgLoad').style.display='none';
+    E('imgOut').style.opacity='1';
+    E('imgMeta').textContent=img.naturalWidth+' × '+img.naturalHeight;
+    E('imgGoTx').textContent='🎨 生 成 图 片';E('imgGo').disabled=false;
+    haptic(12);
+  };
+  img.onerror=function(){
+    imgBusy=false;
+    E('imgLoad').textContent='生成失败，免费服务偶有拥挤，请稍后重试';
+    E('imgGoTx').textContent='🎨 生 成 图 片';E('imgGo').disabled=false;
+  };
+  img.src=IMG+'/prompt/'+encodeURIComponent(p)+'?width='+wh[0]+'&height='+wh[1]+'&nologo=true&seed='+Math.floor(Math.random()*1000000);
+}
+E('imgGo').onclick=imgStart;
+E('imgRegen').onclick=imgStart;
+E('imgPrompt').addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();imgStart();}
+});
+E('imgDl').onclick=function(){
+  var img=E('imgOut');
+  if(!img.src||img.style.opacity!=='1'){aiToast('还没有生成结果');return;}
+  fetch(img.src).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.blob();})
+    .then(function(b){
+      var fn='AI绘画_'+Date.now()+'.jpg';
+      var file=new File([b],fn,{type:b.type||'image/jpeg'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:fn}).catch(function(){});
+        return;
+      }
+      var u=URL.createObjectURL(b),a=document.createElement('a');
+      a.href=u;a.download=fn;document.body.appendChild(a);a.click();
+      setTimeout(function(){URL.revokeObjectURL(u);a.remove();},30000);
+      aiToast('已开始下载 '+fn);
+    })
+    .catch(function(){window.open(img.src,'_blank');aiToast('已在新窗口打开，长按图片即可保存');});
+};
+
+/* ---------- 真人聊天室（独立页 · 公共 MQTT · 自动故障转移 + 保活重连） ---------- */
 var BROKERS=[
+  {u:'wss://broker-cn.emqx.io:8084/mqtt',n:'EMQX中国'},
   {u:'wss://broker.emqx.io:8084/mqtt',n:'EMQX'},
   {u:'wss://broker.hivemq.com:8884/mqtt',n:'HiveMQ'},
   {u:'wss://test.mosquitto.org:8081/mqtt',n:'Mosquitto'}
 ];
 var LTOP='stemglass-gsh/chat/',LPRE='stemglass-gsh/presence/';
 var ROOM_NAME={hall:'大厅',pop:'流行',folk:'民谣',rock:'摇滚',rap:'说唱'};
-var live={cli:null,roomId:'hall',myId:'u'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),members:{},hbTm:null,gcTm:null,watchTm:null,brokerIdx:0,inited:false,fails:0,retryTm:null,connected:false};
+var live={cli:null,roomId:'hall',myId:'u'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),members:{},hbTm:null,gcTm:null,watchTm:null,brokerIdx:0,inited:false,fails:0,retryTm:null,connected:false,needsClear:true};
 var liveDefNick='游客'+Math.floor(1000+Math.random()*9000);
 function liveNick(){
   var n=E('liveNick').value.trim();
@@ -4547,6 +4671,8 @@ function liveNick(){
 function liveStat(cls,tx){
   E('liveDot').className='live-dot'+(cls?' '+cls:'');
   E('liveStatTx').textContent=tx;
+  var row=E('liveStatRow');
+  if(row)row.classList.toggle('warn',cls==='bad');
 }
 function liveCount(){
   E('liveCnt').textContent=Object.keys(live.members).length+1;
@@ -4561,18 +4687,53 @@ function liveCount(){
 }
 function scrollLive(){var l=E('liveList');l.scrollTop=l.scrollHeight;}
 function liveAppend(el){
-  var l=E('liveList');l.appendChild(el);
+  var l=E('liveList');
+  var em=l.querySelector('.live-empty');
+  if(em)em.remove();
+  l.appendChild(el);
   while(l.children.length>150)l.removeChild(l.firstChild);
   scrollLive();
+}
+function liveTime(ts){
+  var d=new Date(ts||Date.now());
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+var AVA_COLORS=['#7c6cff','#4ea8ff','#ff6ec7','#1fa95c','#f59e0b','#ef476f','#06b6d4','#8b5cf6'];
+function avaColor(nick){
+  var h=0;for(var i=0;i<nick.length;i++)h=(h*31+nick.charCodeAt(i))>>>0;
+  return AVA_COLORS[h%AVA_COLORS.length];
+}
+var liveLastKey=null;
+function liveClear(msg){
+  var l=E('liveList');l.innerHTML='';
+  liveLastKey=null;
+  var d=document.createElement('div');
+  d.className='live-empty';
+  d.innerHTML='<div class="le-ico">💬</div><p>'+esc(msg||'还没有消息')+'</p><p class="le-sub">发条消息打个招呼吧~</p>';
+  l.appendChild(d);
 }
 function liveSys(text){
   var d=document.createElement('div');d.className='ai-msg sys';d.textContent=text;liveAppend(d);
 }
-function liveBubble(nick,text,mine){
+function liveBubble(nick,text,mine,ts){
+  var key=(mine?'me':nick);
+  var cont=(liveLastKey===key);
+  liveLastKey=key;
   var d=document.createElement('div');
-  d.className='live-msg '+(mine?'me':'o');
-  if(!mine){var n=document.createElement('span');n.className='lm-nick';n.textContent=nick;d.appendChild(n);}
-  d.appendChild(document.createTextNode(text));
+  d.className='live-row '+(mine?'me':'o')+(cont?' cont':'');
+  var av=document.createElement('div');
+  av.className='lm-ava';
+  av.textContent=(nick||'客')[0];
+  if(!mine)av.style.background=avaColor(nick);
+  var col=document.createElement('div');col.className='lm-col';
+  var meta=document.createElement('div');meta.className='lm-meta';
+  meta.innerHTML='<span class="lm-nick">'+esc(nick)+(mine?'（我）':'')+'</span><span class="lm-time">'+liveTime(ts)+'</span>';
+  var b=document.createElement('div');
+  b.className='live-msg '+(mine?'me':'o');
+  b.textContent=text;
+  col.appendChild(meta);col.appendChild(b);
+  if(mine){d.appendChild(col);d.appendChild(av);}
+  else{d.appendChild(av);d.appendChild(col);}
   liveAppend(d);
 }
 function livePublish(obj){
@@ -4600,14 +4761,14 @@ function onLiveMsg(topic,payload){
   }
   if(m.id===live.myId)return;
   if(m.sys){liveSys(String(m.text||'').slice(0,60));return;}
-  liveBubble(String(m.nick||'游客').slice(0,12),String(m.text||'').slice(0,500),false);
+  liveBubble(String(m.nick||'游客').slice(0,12),String(m.text||'').slice(0,500),false,m.ts);
 }
 function liveBroker(){return BROKERS[live.brokerIdx%BROKERS.length];}
 function scheduleLiveRetry(reason){
   if(live.retryTm)return;
   live.fails++;live.brokerIdx++;
   var next=liveBroker();
-  liveStat('bad',(reason||'连接失败')+'，切换到 '+next.n+' 节点…');
+  liveStat('bad',(reason||'连接失败')+' · 第'+live.fails+'次重试 → '+next.n);
   live.retryTm=setTimeout(function(){live.retryTm=null;liveConnect();},Math.min(8000,800+live.fails*700));
 }
 function liveConnect(){
@@ -4642,7 +4803,12 @@ function liveConnect(){
     livePublish({sys:1,text:liveNick()+' 进入了聊天室'});
     livePresence();
     liveCount();
-    liveSys('已进入「'+ROOM_NAME[live.roomId]+'」房间，可以看到进入之后的新消息');
+    if(live.needsClear){
+      live.needsClear=false;
+      liveClear('已进入「'+ROOM_NAME[live.roomId]+'」房间');
+    }else{
+      liveSys('连接已恢复，继续聊天吧');
+    }
     clearInterval(live.hbTm);live.hbTm=setInterval(livePresence,15000);
     clearInterval(live.gcTm);live.gcTm=setInterval(function(){
       var now=Date.now(),ch=false;
@@ -4667,8 +4833,9 @@ function liveSwitchRoom(id){
   if(id===live.roomId)return;
   var old=live.roomId;
   live.roomId=id;
+  live.needsClear=true;
   [].forEach.call(E('roomChips').querySelectorAll('.chip'),function(b){b.classList.toggle('on',b.dataset.room===id);});
-  E('liveList').innerHTML='';
+  liveClear('已切换到「'+ROOM_NAME[id]+'」房间');
   live.members={};liveCount();
   if(live.cli&&live.connected){
     live.cli.publish(LPRE+old,JSON.stringify({id:live.myId,off:1}),{qos:1});
@@ -4676,9 +4843,9 @@ function liveSwitchRoom(id){
     live.cli.subscribe(LTOP+id,{qos:1});live.cli.subscribe(LPRE+id,{qos:1});
     livePublish({sys:1,text:liveNick()+' 进入了聊天室'});
     livePresence();
-    liveSys('已切换到「'+ROOM_NAME[id]+'」房间，可以看到进入之后的新消息');
+    scrollLive();
   }else{
-    liveSys('已切换到「'+ROOM_NAME[id]+'」房间，正在重新连接…');
+    liveStat('','正在重新连接…');
     liveConnect();
   }
 }
@@ -4691,7 +4858,7 @@ function sendLive(){
   if(!t)return;
   if(!live.connected){liveSys('⚠️ 还没连上聊天服务器，消息未发出，请稍候再试');return;}
   livePublish({id:live.myId,nick:liveNick(),text:t.slice(0,500),ts:Date.now()});
-  liveBubble(liveNick(),t,true);
+  liveBubble(liveNick(),t,true,Date.now());
   E('liveIn').value='';autoGrowLive();
 }
 E('liveSend').onclick=sendLive;
@@ -4706,12 +4873,32 @@ E('liveNick').addEventListener('change',function(){
   if(live.cli&&live.connected){livePresence();liveCount();}
 });
 
-/* ---------- 独立聊天页激活（首次进入才连接） ---------- */
+/* ---------- 独立聊天页激活（首次进入才连接）+ 保活重连 ---------- */
 var pgChat=E('page-chat');
 function chatActivate(){
   scrollLive();
-  if(!live.inited){live.inited=true;liveConnect();}
+  if(!live.inited){live.inited=true;liveConnect();return;}
+  liveKick();
 }
+/* 回到前台/联网时：若已断线立即重连，不等待退避计时 */
+function liveKick(){
+  if(!live.inited||live.connected)return;
+  if(document.visibilityState&&document.visibilityState!=='visible')return;
+  if(live.retryTm){clearTimeout(live.retryTm);live.retryTm=null;}
+  live.fails=Math.min(live.fails,1);
+  liveConnect();
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible')liveKick();
+});
+window.addEventListener('focus',liveKick);
+window.addEventListener('online',function(){liveStat('','网络已恢复，正在连接…');liveKick();});
+/* 离开页面时尽力发离场消息（will 遗嘱兜底） */
+window.addEventListener('pagehide',function(){
+  try{
+    if(live.cli&&live.connected)live.cli.publish(LPRE+live.roomId,JSON.stringify({id:live.myId,off:1}),{qos:0});
+  }catch(e){}
+});
 if('MutationObserver' in window){
   new MutationObserver(function(){if(pgChat.classList.contains('on'))chatActivate();}).observe(pgChat,{attributes:true,attributeFilter:['class']});
 }
